@@ -7,10 +7,12 @@
  */
 
 plugins {
-    // Apply the org.jetbrains.kotlin.jvm Plugin to add support for Kotlin.
-    id("org.jetbrains.kotlin.jvm") version "1.5.31"
+    id("org.springframework.boot") version "2.7.4"
+    id("io.spring.dependency-management") version "1.0.14.RELEASE"
+    kotlin("jvm") version "1.6.21"
+    kotlin("plugin.spring") version "1.6.21"
+    id("org.jlleitschuh.gradle.ktlint") version "11.0.0"
 
-    // Apply the application plugin to add support for building a CLI application in Java.
     application
 }
 
@@ -34,9 +36,18 @@ dependencies {
 
     // Use the Kotlin JUnit integration.
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
+
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 
 application {
     // Define the main class for the application.
     mainClass.set("me.kruemmelspalter.file_spider.backend.AppKt")
+}
+
+tasks.processResources {
+    from("../../frontend/dist") { into("static") }
 }

@@ -3,13 +3,8 @@
  */
 package me.kruemmelspalter.file_spider.backend
 
-class App {
-    val greeting: String
-        get() {
-            return "Hello World!"
-        }
-}
+import me.kruemmelspalter.file_spider.backend.api.FileSpiderApplication
 
 fun main() {
-    println(App().greeting)
+    FileSpiderApplication.run(arrayOf(""))
 }

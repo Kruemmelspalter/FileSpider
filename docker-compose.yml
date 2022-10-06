@@ -1,0 +1,18 @@
+version: '3'
+
+services:
+  database:
+    image: mariadb
+    # restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: database
+      MARIADB_USER: user
+      MARIADB_PASSWORD: password
+      MARIADB_ROOT_HOST: localhost
+      MARIADB_RANDOM_ROOT_PASSWORD: 1
+  
+  filespider:
+    build: ./backend
+    # restart: unless-stopped
+    environment:
+      APP_OPTS: -Ddatabase.host=database -Ddatabase.username=user -Ddatabase.password=password -Ddatabase.database=database

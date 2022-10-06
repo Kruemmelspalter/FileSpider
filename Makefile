@@ -16,4 +16,5 @@ docker:
 
 run:
 	make -C frontend build
-	make -C backend run
+	make -C backend build
+	docker-compose up --build

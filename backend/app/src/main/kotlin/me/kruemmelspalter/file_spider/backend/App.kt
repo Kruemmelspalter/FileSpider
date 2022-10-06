@@ -3,8 +3,31 @@
  */
 package me.kruemmelspalter.file_spider.backend
 
+import com.mysql.cj.jdbc.exceptions.CommunicationsException
+import com.typesafe.config.ConfigFactory
 import me.kruemmelspalter.file_spider.backend.api.FileSpiderApplication
+import me.kruemmelspalter.file_spider.backend.database.DatabaseConnection
+import org.slf4j.LoggerFactory
+import kotlin.system.exitProcess
 
 fun main() {
+    val logger = LoggerFactory.getLogger("main")
+    val config = ConfigFactory.load()
+
     FileSpiderApplication.run(arrayOf(""))
+
+    try {
+        DatabaseConnection.connect(
+            config.getString("database.host"),
+            config.getInt("database.port"),
+            config.getString("database.database"),
+            config.getString("database.username"),
+            config.getString("database.password"),
+        )
+        logger.info("Connected to database")
+    } catch (e: CommunicationsException) {
+        logger.error("Could not connect to database")
+        e.printStackTrace()
+        exitProcess(1)
+    }
 }

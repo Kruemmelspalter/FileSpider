@@ -9,10 +9,25 @@ services:
       MARIADB_USER: user
       MARIADB_PASSWORD: password
       MARIADB_ROOT_HOST: localhost
-      MARIADB_RANDOM_ROOT_PASSWORD: 1
+      MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 1
+    expose:
+      - 3306
+    volumes:
+      - ./data/mysql:/var/lib/mysql
   
   filespider:
     build: ./backend
     # restart: unless-stopped
     environment:
       APP_OPTS: -Ddatabase.host=database -Ddatabase.username=user -Ddatabase.password=password -Ddatabase.database=database
+    volumes:
+      - ./data/filespider:/var/lib/filespider
+    depends_on:
+      database_started:
+        condition: service_completed_successfully
+  
+  database_started:
+    image: dadarek/wait-for-dependencies
+    depends_on:
+      - database
+    command: database:3306

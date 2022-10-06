@@ -41,6 +41,10 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+
+    implementation("mysql:mysql-connector-java")
+    implementation("org.mybatis:mybatis:3.4.5")
+    implementation("com.typesafe:config:1.4.2")
 }
 
 application {

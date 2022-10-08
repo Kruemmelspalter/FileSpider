@@ -14,6 +14,15 @@ fun main() {
     val logger = LoggerFactory.getLogger("main")
     val config = ConfigFactory.load()
 
+    try {
+        FileSystemController.initialize()
+    } catch(e: Exception) {
+        logger.error("Something went wrong accessing the filesystem")
+        e.printStackTrace()
+        exitProcess(1)
+    }
+
+
     FileSpiderApplication.run(arrayOf(""))
 
     try {

@@ -4,7 +4,6 @@ import com.typesafe.config.ConfigFactory
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.UUID
 
 object FileSystemController {
     private val logger = LoggerFactory.getLogger(FileSystemController.javaClass)

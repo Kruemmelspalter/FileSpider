@@ -16,12 +16,11 @@ fun main() {
 
     try {
         FileSystemController.initialize()
-    } catch(e: Exception) {
+    } catch (e: Exception) {
         logger.error("Something went wrong accessing the filesystem")
         e.printStackTrace()
         exitProcess(1)
     }
-
 
     FileSpiderApplication.run(arrayOf(""))
 

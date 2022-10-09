@@ -1,4 +1,4 @@
-package me.kruemmelspalter.file_spider.backend.database
+package me.kruemmelspalter.file_spider.backend.database.model
 
 import java.util.UUID
 

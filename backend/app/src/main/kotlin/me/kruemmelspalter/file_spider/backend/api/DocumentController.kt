@@ -1,5 +1,6 @@
 package me.kruemmelspalter.file_spider.backend.api
 
+import me.kruemmelspalter.file_spider.backend.database.dao.DocumentMeta
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -11,8 +12,7 @@ import java.util.UUID
 class DocumentController {
 
     @GetMapping("/{id}")
-    fun getIndex(@PathVariable("id") documentId: UUID): String {
-        // TODO implement
-        return ""
+    fun getDocumentMeta(@PathVariable("id") documentId: UUID): DocumentMeta {
+
     }
 }

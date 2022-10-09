@@ -13,7 +13,7 @@ import java.util.UUID
 object FileSystemController {
     private val logger = LoggerFactory.getLogger(FileSystemController.javaClass)
     private val config = ConfigFactory.load()
-    val documentDirectory = Paths.get(config.getString("documentDirectory")).toAbsolutePath()
+    val documentDirectory = Paths.get(config.getString("app.documentDirectory")).toAbsolutePath()
     fun initialize() {
         if (!Files.isDirectory(documentDirectory)) {
             logger.warn("Document Directory doesn't exist; creating")

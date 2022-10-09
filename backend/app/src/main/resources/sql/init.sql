@@ -1,6 +1,6 @@
 create table Document (
     id uuid not null,
-    title tinytext default "Untitled",
+    title tinytext default 'Untitled',
     renderer varchar(16),
     editor varchar(32),
     mimeType varchar(64),

@@ -43,13 +43,14 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 
     implementation("mysql:mysql-connector-java")
+    implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     implementation("org.mybatis:mybatis:3.4.5")
     implementation("com.typesafe:config:1.4.2")
 }
 
 application {
     // Define the main class for the application.
-    mainClass.set("me.kruemmelspalter.file_spider.backend.AppKt")
+    mainClass.set("me.kruemmelspalter.file_spider.backend.FileSpiderApplicationKt")
 }
 
 tasks.processResources {

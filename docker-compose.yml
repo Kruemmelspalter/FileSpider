@@ -1,5 +1,12 @@
 version: '3'
 
+networks:
+    default:
+        ipam:
+            driver: default
+            config:
+                - subnet: 172.31.69.0/24
+
 services:
   database:
     image: mariadb

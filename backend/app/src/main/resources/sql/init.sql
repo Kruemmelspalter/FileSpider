@@ -1,6 +1,7 @@
 create table Document (
     id uuid not null,
     title tinytext default 'Untitled',
+    added timestamp,
     renderer varchar(16),
     editor varchar(32),
     mimeType varchar(64),

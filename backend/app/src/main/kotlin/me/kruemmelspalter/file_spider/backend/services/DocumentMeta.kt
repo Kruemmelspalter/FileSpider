@@ -1,4 +1,4 @@
-package me.kruemmelspalter.file_spider.backend.database.dao
+package me.kruemmelspalter.file_spider.backend.services
 
 import me.kruemmelspalter.file_spider.backend.database.model.Document
 import java.sql.Timestamp

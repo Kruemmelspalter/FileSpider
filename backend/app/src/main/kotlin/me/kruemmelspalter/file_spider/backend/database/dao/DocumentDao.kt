@@ -1,19 +1,17 @@
 package me.kruemmelspalter.file_spider.backend.database.dao
 
 import me.kruemmelspalter.file_spider.backend.database.model.Document
+import me.kruemmelspalter.file_spider.backend.services.DocumentMeta
 import java.util.Optional
 import java.util.UUID
 
 interface DocumentDao {
-    fun getDocumentMetaById(id: UUID): Optional<DocumentMeta>
 
-    fun insertDocument(document: Document): UUID {
-        val id = UUID.randomUUID()
-        insertDocument(id, document)
-        return id
-    }
+    fun getDocument(id: UUID): Optional<Document>
 
-    fun insertDocument(id: UUID, document: Document)
+    fun getTags(id: UUID): List<String>
+
+    fun insertDocument(document: Document)
 
     fun deleteDocument(id: UUID)
 

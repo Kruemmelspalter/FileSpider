@@ -56,3 +56,6 @@ application {
 tasks.processResources {
     from("../../frontend/dist") { into("static") }
 }
+tasks.withType(JavaExec::class) {
+    systemProperties(System.getProperties().mapKeys { it.key.toString() })
+}

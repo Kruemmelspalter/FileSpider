@@ -21,11 +21,6 @@ class FileSpiderApplication {
     @Autowired private val jdbcTemplate: JdbcTemplate? = null
 
     @EventListener(ApplicationReadyEvent::class)
-    fun initializeFSController() {
-        FileSystemController.initialize()
-    }
-
-    @EventListener(ApplicationReadyEvent::class)
     fun createTablesIfNonexistent() {
         jdbcTemplate!!.queryForObject(
             "select count(*) from information_schema.tables where table_name='Document' or table_name='Tag'"

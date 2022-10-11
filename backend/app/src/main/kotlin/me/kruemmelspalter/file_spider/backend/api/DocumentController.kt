@@ -31,11 +31,16 @@ class DocumentController {
     @GetMapping("/")
     fun searchDocuments(@RequestParam("filter") filterString: String): List<DocumentMeta> {
         if (!Pattern.matches(
-                "^\\w+(?:,\\w+)*\$",
+                "^!?\\w+(?:,!?\\w+)*\$",
                 filterString
             )
         ) throw ResponseStatusException(HttpStatus.BAD_REQUEST)
 
-        return documentService!!.filterDocuments(filterString.split(","))
+        val filters = filterString.split(",")
+
+        return documentService!!.filterDocuments(
+            filters.filter { !it.startsWith("!") },
+            filters.filter { it.startsWith("!") }.map { it.substring(1) }
+        )
     }
 }

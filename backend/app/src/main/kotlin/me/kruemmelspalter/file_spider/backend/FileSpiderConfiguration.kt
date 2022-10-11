@@ -53,7 +53,6 @@ class FileSpiderConfiguration : WebMvcConfigurer, WebServerFactoryCustomizer<Con
         factory.setPort(80)
     }
 
-    @Suppress("SpringComponentScan")
     @Bean
     fun jdbcTemplate(): JdbcTemplate {
         return JdbcTemplate(dataSource())

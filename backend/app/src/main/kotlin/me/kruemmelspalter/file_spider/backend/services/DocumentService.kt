@@ -33,8 +33,8 @@ class DocumentService {
         )
     }
 
-    fun filterDocuments(filter: List<String>): List<DocumentMeta> {
-        return documentRepository!!.filterDocuments(filter).map {
+    fun filterDocuments(posFilter: List<String>, negFilter: List<String>): List<DocumentMeta> {
+        return documentRepository!!.filterDocuments(posFilter, negFilter).map {
             documentToMeta(it)
         }
     }

@@ -3,6 +3,8 @@ package me.kruemmelspalter.file_spider.backend.database.dao
 import me.kruemmelspalter.file_spider.backend.database.model.Document
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations
 import org.springframework.stereotype.Repository
 import java.sql.ResultSet
 import java.util.Optional
@@ -14,12 +16,12 @@ class DocumentRepository : DocumentDao {
     @Autowired
     val jdbcTemplate: JdbcTemplate? = null
 
+    @Autowired
+    val namedParameterJdbcOperations: NamedParameterJdbcOperations? = null
+
     override fun getDocument(id: UUID): Optional<Document> {
         val documents = jdbcTemplate!!.query(
-            "select * from Document where id = ?",
-            { rs, _ ->
-                documentFromResultSet(rs)
-            }, id.toString()
+            "select * from Document where id = ?", { rs, _ -> documentFromResultSet(rs) }, id.toString()
         )
         if (documents.size != 1) return Optional.empty()
         return Optional.of(documents[0])
@@ -27,10 +29,7 @@ class DocumentRepository : DocumentDao {
 
     override fun getTags(id: UUID): List<String> {
         return jdbcTemplate!!.query(
-            "select tag from Tag where document = ?",
-            { rs, _ ->
-                rs.getString(1)
-            }, id.toString()
+            "select tag from Tag where document = ?", { rs, _ -> rs.getString(1) }, id.toString()
         )
     }
 
@@ -42,30 +41,20 @@ class DocumentRepository : DocumentDao {
         TODO("Not yet implemented")
     }
 
-    override fun filterDocuments(filter: List<String>): List<Document> {
-        if (filter.isEmpty()) return ArrayList()
+    override fun filterDocuments(posFilter: List<String>, negFilter: List<String>): List<Document> {
+        if (posFilter.isEmpty()) return ArrayList()
 
-        val reqBuilder = StringBuilder().append(
-            "select Document.*, Tags.tagCount from Document " +
-                    "inner join (select document, count(tag) as tagCount from Tag where tag=? "
-        )
-        for (i in 2..filter.size) reqBuilder.append("or tag=? ")
-        reqBuilder.append("group by document) as Tags where Tags.document = Document.id;")
-
-        val documents = jdbcTemplate!!.query(
-            {
-                val stmt = it.prepareStatement(reqBuilder.toString())
-                for (i in filter.indices) {
-                    stmt.setString(i + 1, filter[i])
-                }
-                return@query stmt
-            },
-            { rs, _ ->
-                if (rs.getInt(7) != filter.size) return@query null
-                documentFromResultSet(rs)
-            }
-        )
-        return documents.filterNotNull()
+        return namedParameterJdbcOperations!!.query(
+            "select Document.* from Document left join (select document, count(tag) as tagCount from Tag where " +
+                "tag in (:posTags) group by document) as postags on postags.document = Document.id " +
+                (
+                    if (negFilter.isEmpty()) "join (select NULL as tagCount) as negtags" else
+                        "left join (select document, count(tag) as tagCount from Tag " +
+                            "where tag in (:negTags) group by document) as negtags on negtags.document = Document.id"
+                    ) +
+                " where postags.tagCount = :ptCount and negtags.tagCount IS NULL",
+            MapSqlParameterSource(mapOf("posTags" to posFilter, "negTags" to negFilter, "ptCount" to posFilter.size))
+        ) { rs, _ -> documentFromResultSet(rs) }
     }
 
     private fun documentFromResultSet(rs: ResultSet) = Document(

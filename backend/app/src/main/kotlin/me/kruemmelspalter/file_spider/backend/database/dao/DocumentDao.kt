@@ -14,5 +14,5 @@ interface DocumentDao {
 
     fun deleteDocument(id: UUID)
 
-    fun filterDocuments(filter: List<String>): List<Document>
+    fun filterDocuments(posFilter: List<String>, negFilter: List<String>): List<Document>
 }

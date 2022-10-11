@@ -1,10 +1,10 @@
 package me.kruemmelspalter.file_spider.backend.database.dao
 
 import me.kruemmelspalter.file_spider.backend.database.model.Document
-import me.kruemmelspalter.file_spider.backend.services.DocumentMeta
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
+import java.sql.ResultSet
 import java.util.Optional
 import java.util.UUID
 
@@ -18,14 +18,7 @@ class DocumentRepository : DocumentDao {
         val documents = jdbcTemplate!!.query(
             "select * from Document where id = ?",
             { rs, _ ->
-                Document(
-                    UUID.fromString(rs.getString(1)),
-                    rs.getString(2),
-                    rs.getTimestamp(3),
-                    rs.getString(4),
-                    rs.getString(5),
-                    rs.getString(6)
-                )
+                documentFromResultSet(rs)
             }, id.toString()
         )
         if (documents.size != 1) return Optional.empty()
@@ -49,7 +42,38 @@ class DocumentRepository : DocumentDao {
         TODO("Not yet implemented")
     }
 
-    override fun filterDocuments(filter: String): List<DocumentMeta> {
-        TODO("Not yet implemented")
+    override fun filterDocuments(filter: List<String>): List<Document> {
+        if (filter.isEmpty()) return ArrayList()
+
+        val reqBuilder = StringBuilder().append(
+            "select Document.*, Tags.tagCount from Document " +
+                    "inner join (select document, count(tag) as tagCount from Tag where tag=? "
+        )
+        for (i in 2..filter.size) reqBuilder.append("or tag=? ")
+        reqBuilder.append("group by document) as Tags where Tags.document = Document.id;")
+
+        val documents = jdbcTemplate!!.query(
+            {
+                val stmt = it.prepareStatement(reqBuilder.toString())
+                for (i in filter.indices) {
+                    stmt.setString(i + 1, filter[i])
+                }
+                return@query stmt
+            },
+            { rs, _ ->
+                if (rs.getInt(7) != filter.size) return@query null
+                documentFromResultSet(rs)
+            }
+        )
+        return documents.filterNotNull()
     }
+
+    private fun documentFromResultSet(rs: ResultSet) = Document(
+        UUID.fromString(rs.getString(1)),
+        rs.getString(2),
+        rs.getTimestamp(3),
+        rs.getString(4),
+        rs.getString(5),
+        rs.getString(6)
+    )
 }

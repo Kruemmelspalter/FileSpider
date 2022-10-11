@@ -1,7 +1,6 @@
 package me.kruemmelspalter.file_spider.backend.database.dao
 
 import me.kruemmelspalter.file_spider.backend.database.model.Document
-import me.kruemmelspalter.file_spider.backend.services.DocumentMeta
 import java.util.Optional
 import java.util.UUID
 
@@ -15,5 +14,5 @@ interface DocumentDao {
 
     fun deleteDocument(id: UUID)
 
-    fun filterDocuments(filter: String): List<DocumentMeta>
+    fun filterDocuments(filter: List<String>): List<Document>
 }

@@ -21,7 +21,8 @@ import javax.sql.DataSource
 @Suppress("SpringComponentScan")
 @Configuration
 @EnableJdbcRepositories(basePackages = ["com.springdata"])
-class FileSpiderConfiguration : WebMvcConfigurer, WebServerFactoryCustomizer<ConfigurableWebServerFactory>, AbstractJdbcConfiguration() {
+class FileSpiderConfiguration : WebMvcConfigurer, WebServerFactoryCustomizer<ConfigurableWebServerFactory>,
+    AbstractJdbcConfiguration() {
     val config: Config = ConfigFactory.load()
 
     @Bean
@@ -30,7 +31,7 @@ class FileSpiderConfiguration : WebMvcConfigurer, WebServerFactoryCustomizer<Con
         dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver")
         dataSource.url =
             "jdbc:mysql://${config.getString("database.host")}:${config.getString("database.port")}/" +
-            config.getString("database.database")
+                    config.getString("database.database")
         dataSource.username = config.getString("database.username")
         dataSource.password = config.getString("database.password")
         return dataSource
@@ -49,6 +50,7 @@ class FileSpiderConfiguration : WebMvcConfigurer, WebServerFactoryCustomizer<Con
     override fun addResourceHandlers(registry: ResourceHandlerRegistry) {
         registry.addResourceHandler("/**").addResourceLocations("classpath:/static/")
     }
+
     override fun customize(factory: ConfigurableWebServerFactory) {
         factory.setPort(80)
     }

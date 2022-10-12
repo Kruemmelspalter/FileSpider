@@ -1,11 +1,13 @@
-package me.kruemmelspalter.file_spider.backend
+package me.kruemmelspalter.file_spider.backend.services
 
 import com.typesafe.config.ConfigFactory
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.io.BufferedReader
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileReader
+import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -32,6 +34,10 @@ class FileSystemService {
 
     fun getFileFromID(id: UUID): File {
         return File(getPathFromID(id).toUri())
+    }
+
+    fun getInputStreamFromID(id: UUID): InputStream {
+        return FileInputStream(getFileFromID(id))
     }
 
     fun getContentFromID(id: UUID): String {

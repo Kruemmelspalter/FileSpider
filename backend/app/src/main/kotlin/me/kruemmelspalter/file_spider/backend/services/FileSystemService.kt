@@ -19,6 +19,8 @@ class FileSystemService {
     private val logger = LoggerFactory.getLogger(FileSystemService::class.java)
     private val config = ConfigFactory.load()
     private val documentDirectory = Paths.get(config.getString("app.documentDirectory")).toAbsolutePath()
+    private val tmpDirectory = Paths.get(config.getString("app.tmpDirectory")).toAbsolutePath()
+
     init {
         if (!Files.isReadable(documentDirectory)) throw Exception("Document Directory isn't readable")
         if (!Files.isWritable(documentDirectory)) throw Exception("Document Directory isn't writable")
@@ -26,6 +28,9 @@ class FileSystemService {
             logger.warn("Document Directory doesn't exist; creating")
             Files.createDirectories(documentDirectory)
         }
+        if (!Files.exists(tmpDirectory)) throw Exception("Temporary Directory doesn't exist")
+        if (!Files.isReadable(tmpDirectory)) throw Exception("Temporary Directory isn't readable")
+        if (!Files.isWritable(tmpDirectory)) throw Exception("Temporary Directory isn't writable")
     }
 
     fun getPathFromID(id: UUID): Path {
@@ -55,5 +60,9 @@ class FileSystemService {
 
     fun getFileAttributesFromID(id: UUID): BasicFileAttributes {
         return Files.readAttributes(getPathFromID(id), BasicFileAttributes::class.java)
+    }
+
+    fun getTemporaryDirectory(): Path {
+        return tmpDirectory
     }
 }

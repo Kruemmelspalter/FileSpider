@@ -8,9 +8,18 @@ import java.util.Optional
 interface Renderer {
     companion object {
         private val plainRenderer = PlainRenderer()
+        private val latexRenderer = CommandRenderer(
+            "pdflatex -shell-escape",
+            "%file%.pdf",
+            "pdf",
+            "application/pdf"
+        )
+        private val mimeSpecificRenderer = MimeSpecificRenderer()
         fun getRenderer(renderer: String): Renderer {
             return when (renderer) {
+                "mimeSpecific" -> mimeSpecificRenderer
                 "plain" -> plainRenderer
+                "latex" -> latexRenderer
                 else -> plainRenderer
             }
         }

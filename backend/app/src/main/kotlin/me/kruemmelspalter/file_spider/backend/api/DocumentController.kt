@@ -6,6 +6,7 @@ import me.kruemmelspalter.file_spider.backend.services.RenderedDocument
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
+import org.springframework.http.ContentDisposition
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
+import java.util.Optional
 import java.util.UUID
 import java.util.regex.Pattern
 
@@ -51,7 +53,10 @@ class DocumentController {
     }
 
     @GetMapping("/{id}/rendered")
-    fun getRenderedDocument(@PathVariable("id") documentId: UUID): ResponseEntity<Resource> {
+    fun getRenderedDocument(
+        @PathVariable("id") documentId: UUID,
+        @RequestParam("download") download: Optional<Boolean>
+    ): ResponseEntity<Resource> {
 
         val renderedDocument: RenderedDocument = documentService!!.renderDocument(documentId).orElseThrow {
             ResponseStatusException(HttpStatus.NOT_FOUND)
@@ -60,6 +65,8 @@ class DocumentController {
         val headers = HttpHeaders()
         headers.contentType = MediaType.parseMediaType(renderedDocument.contentType)
         headers.contentLength = renderedDocument.contentLength
+        if (download.orElseGet { false }) headers.contentDisposition =
+            ContentDisposition.parse("attachment; filename=" + renderedDocument.fileName)
 
         return ResponseEntity
             .status(HttpStatus.OK)

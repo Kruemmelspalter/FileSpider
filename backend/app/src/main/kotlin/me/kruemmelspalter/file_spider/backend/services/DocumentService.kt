@@ -2,7 +2,7 @@ package me.kruemmelspalter.file_spider.backend.services
 
 import me.kruemmelspalter.file_spider.backend.database.dao.DocumentRepository
 import me.kruemmelspalter.file_spider.backend.database.model.Document
-import me.kruemmelspalter.file_spider.backend.renderer.PlainRenderer
+import me.kruemmelspalter.file_spider.backend.renderer.Renderer
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.sql.Timestamp
@@ -39,10 +39,7 @@ class DocumentService {
 
     fun renderDocument(id: UUID): Optional<RenderedDocument> {
         val document = documentRepository!!.getDocument(id)
-        if (document.isEmpty) return Optional.empty()
-
-        return when (document.get().renderer) {
-            else -> PlainRenderer()
-        }.render(document.get(), fsService!!)
+        return if (document.isEmpty) Optional.empty()
+        else Renderer.getRenderer(document.get().renderer).render(document.get(), fsService!!)
     }
 }

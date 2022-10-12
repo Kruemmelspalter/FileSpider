@@ -11,7 +11,8 @@ class PlainRenderer : Renderer {
             RenderedDocument(
                 fsService.getInputStreamFromID(document.id),
                 document.mimeType,
-                fsService.getFileAttributesFromID(document.id).size()
+                fsService.getFileAttributesFromID(document.id).size(),
+                document.id.toString() + if (document.fileExtension != "") "." + document.fileExtension else ""
             )
         )
     }

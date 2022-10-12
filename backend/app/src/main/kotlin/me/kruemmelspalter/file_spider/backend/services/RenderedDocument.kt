@@ -6,4 +6,5 @@ data class RenderedDocument(
     val stream: InputStream,
     val contentType: String,
     val contentLength: Long,
+    val fileName: String,
 )

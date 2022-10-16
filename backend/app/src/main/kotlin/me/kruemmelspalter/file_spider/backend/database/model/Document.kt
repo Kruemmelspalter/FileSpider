@@ -11,5 +11,5 @@ data class Document(
     val renderer: String,
     val editor: String,
     val mimeType: String,
-    val fileExtension: String,
+    val fileExtension: String?,
 )

@@ -10,6 +10,7 @@ ENTRYPOINT ["app/bin/app"]
 
 RUN apt-get update -y
 RUN apt-get install -y texlive-full
+RUN apt-get install -y xournalpp
 
 COPY app/build/distributions/app.tar FileSpider.tar
 RUN tar -xf FileSpider.tar

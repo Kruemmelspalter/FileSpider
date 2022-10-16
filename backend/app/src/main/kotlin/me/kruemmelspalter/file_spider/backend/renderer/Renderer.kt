@@ -15,12 +15,20 @@ interface Renderer {
             "application/pdf",
             10,
         )
+        private val xournalppRenderer = CommandRenderer(
+            "xournalpp -p out.pdf",
+            "out.pdf",
+            "pdf",
+            "application/pdf",
+            1,
+        )
         private val mimeSpecificRenderer = MimeSpecificRenderer()
         fun getRenderer(renderer: String): Renderer {
             return when (renderer) {
                 "mimeSpecific" -> mimeSpecificRenderer
                 "plain" -> plainRenderer
                 "latex" -> latexRenderer
+                "xournalpp", "xournal" -> xournalppRenderer
                 else -> plainRenderer
             }
         }

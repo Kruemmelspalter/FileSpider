@@ -1,5 +1,6 @@
 package me.kruemmelspalter.file_spider.backend.renderer
 
+import me.kruemmelspalter.file_spider.backend.RenderingException
 import me.kruemmelspalter.file_spider.backend.database.model.Document
 import me.kruemmelspalter.file_spider.backend.services.FileSystemService
 import me.kruemmelspalter.file_spider.backend.services.RenderedDocument
@@ -10,26 +11,35 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.Optional
+import java.util.concurrent.TimeUnit
 
 class CommandRenderer(
     private val commandTemplate: String,
     private val generatedFileNameTemplate: String,
     private val fileExtension: String,
-    private val mimeType: String
+    private val mimeType: String,
+    private val timeout: Long,
 ) : TempFileRenderer {
     override fun render(document: Document, fsService: FileSystemService, tmpPath: Path): Optional<RenderedDocument> {
         var command = commandTemplate
-        if (command.contains("%file%")) command = command.replace("%file%", document.id.toString())
+        if (command.contains("%file%"))
+            command = command.replace("%file%", document.id.toString())
         else command += " " + document.id.toString()
 
         var generatedFileName = generatedFileNameTemplate
         if (generatedFileName.contains("%file%")) generatedFileName =
             generatedFileName.replace("%file%", document.id.toString())
 
-        val process = ProcessBuilder("bash", "-c", command).directory(File(tmpPath.toString())).start()
+        val process = ProcessBuilder(
+            "bash", "-c", "($command)2>&1 >" + fsService.getLogPathFromID(document.id)
+        )
+            .directory(File(tmpPath.toString())).start()
 
-        process.waitFor()
-        if (process.exitValue() != 0) throw RuntimeException(String(process.errorStream.readAllBytes()))
+        if (!process.waitFor(
+                timeout,
+                TimeUnit.SECONDS
+            ) || process.exitValue() != 0
+        ) throw RenderingException(String(fsService!!.readLog(document.id).get().readAllBytes()))
 
         return Optional.of(
             RenderedDocument(

@@ -12,6 +12,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
+import java.util.Optional
 import java.util.UUID
 
 @Service
@@ -33,12 +34,16 @@ class FileSystemService {
         if (!Files.isWritable(tmpDirectory)) throw Exception("Temporary Directory isn't writable")
     }
 
-    fun getPathFromID(id: UUID): Path {
-        return Paths.get(documentDirectory.toString(), id.toString())
+    fun getDocumentPathFromID(id: UUID): Path {
+        return Paths.get(getDirectoryPathFromID(id).toString(), id.toString())
+    }
+
+    fun getDirectoryPathFromID(id: UUID): Path {
+        return Paths.get(documentDirectory.toString(), id.toString()).toAbsolutePath()
     }
 
     fun getFileFromID(id: UUID): File {
-        return File(getPathFromID(id).toUri())
+        return File(getDocumentPathFromID(id).toUri())
     }
 
     fun getInputStreamFromID(id: UUID): InputStream {
@@ -59,10 +64,20 @@ class FileSystemService {
     }
 
     fun getFileAttributesFromID(id: UUID): BasicFileAttributes {
-        return Files.readAttributes(getPathFromID(id), BasicFileAttributes::class.java)
+        return Files.readAttributes(getDocumentPathFromID(id), BasicFileAttributes::class.java)
     }
 
     fun getTemporaryDirectory(): Path {
         return tmpDirectory
+    }
+
+    fun getLogPathFromID(id: UUID): Path {
+        return Paths.get(tmpDirectory.toString(), "$id.log").toAbsolutePath()
+    }
+
+    fun readLog(id: UUID): Optional<InputStream> {
+        val file = File(getLogPathFromID(id).toString())
+        return if (!file.exists()) Optional.empty()
+        else Optional.of(FileInputStream(file))
     }
 }

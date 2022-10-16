@@ -9,10 +9,11 @@ interface Renderer {
     companion object {
         private val plainRenderer = PlainRenderer()
         private val latexRenderer = CommandRenderer(
-            "pdflatex -shell-escape",
+            "pdflatex -draftmode -halt-on-error %file% && pdflatex -halt-on-error %file%",
             "%file%.pdf",
             "pdf",
-            "application/pdf"
+            "application/pdf",
+            10,
         )
         private val mimeSpecificRenderer = MimeSpecificRenderer()
         fun getRenderer(renderer: String): Renderer {

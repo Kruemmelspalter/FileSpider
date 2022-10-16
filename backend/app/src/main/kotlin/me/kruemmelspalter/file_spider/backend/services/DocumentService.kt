@@ -5,6 +5,7 @@ import me.kruemmelspalter.file_spider.backend.database.model.Document
 import me.kruemmelspalter.file_spider.backend.renderer.Renderer
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
+import java.io.InputStream
 import java.sql.Timestamp
 import java.util.Optional
 import java.util.UUID
@@ -41,5 +42,11 @@ class DocumentService {
         val document = documentRepository!!.getDocument(id)
         return if (document.isEmpty) Optional.empty()
         else Renderer.getRenderer(document.get().renderer).render(document.get(), fsService!!)
+    }
+
+    fun readDocumentLog(id: UUID): Optional<InputStream> {
+        val document = documentRepository!!.getDocument(id)
+        return if (document.isEmpty) Optional.empty()
+        else fsService!!.readLog(id)
     }
 }

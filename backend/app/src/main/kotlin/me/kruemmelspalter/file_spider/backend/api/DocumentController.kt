@@ -1,5 +1,6 @@
 package me.kruemmelspalter.file_spider.backend.api
 
+import me.kruemmelspalter.file_spider.backend.RenderingException
 import me.kruemmelspalter.file_spider.backend.services.DocumentMeta
 import me.kruemmelspalter.file_spider.backend.services.DocumentService
 import me.kruemmelspalter.file_spider.backend.services.RenderedDocument
@@ -11,6 +12,7 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -72,5 +74,17 @@ class DocumentController {
             .status(HttpStatus.OK)
             .headers(headers)
             .body(InputStreamResource(renderedDocument.stream))
+    }
+
+    @GetMapping("/{id}/renderlog")
+    fun getRenderLog(@PathVariable id: UUID): InputStreamResource {
+        val log = documentService!!.readDocumentLog(id)
+        if (log.isEmpty) throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        return InputStreamResource(log.get())
+    }
+
+    @ExceptionHandler(value = [RenderingException::class])
+    fun renderingException(exception: RenderingException?): ResponseEntity<String> {
+        return ResponseEntity(exception!!.message, HttpStatus.INTERNAL_SERVER_ERROR)
     }
 }

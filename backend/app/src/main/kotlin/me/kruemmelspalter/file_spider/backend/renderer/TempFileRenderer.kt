@@ -18,11 +18,10 @@ interface TempFileRenderer : Renderer {
             "filespider-${document.id}-${Date().time}"
         )
         Files.createDirectories(tmpPath)
-        Files.copy(fsService.getPathFromID(document.id), Paths.get(tmpPath.toString(), document.id.toString()))
+        FileSystemUtils.copyRecursively(fsService.getDirectoryPathFromID(document.id), tmpPath)
 
         val renderedDocument = render(document, fsService, tmpPath)
 
-        FileSystemUtils.deleteRecursively(tmpPath)
         FileSystemUtils.deleteRecursively(tmpPath)
 
         return renderedDocument

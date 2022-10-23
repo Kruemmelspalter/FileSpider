@@ -31,7 +31,7 @@ class FileSpiderConfiguration : WebMvcConfigurer, WebServerFactoryCustomizer<Con
         dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver")
         dataSource.url =
             "jdbc:mysql://${config.getString("database.host")}:${config.getString("database.port")}/" +
-                    config.getString("database.database")
+            config.getString("database.database")
         dataSource.username = config.getString("database.username")
         dataSource.password = config.getString("database.password")
         return dataSource

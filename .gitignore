@@ -1,3 +1,4 @@
 shell.nix
 data
 .vscode
+.idea

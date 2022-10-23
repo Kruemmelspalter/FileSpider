@@ -22,13 +22,21 @@ interface Renderer {
             "application/pdf",
             1,
         )
+        private val markdownRenderer = CommandRenderer(
+            "pandoc -f markdown -o out.html %file%",
+            "out.html",
+            "html",
+            "test/html",
+            1
+        )
         private val mimeSpecificRenderer = MimeSpecificRenderer()
         fun getRenderer(renderer: String): Renderer {
             return when (renderer) {
                 "mimeSpecific" -> mimeSpecificRenderer
                 "plain" -> plainRenderer
-                "latex" -> latexRenderer
+                "latex", "tex" -> latexRenderer
                 "xournalpp", "xournal" -> xournalppRenderer
+                "markdown", "md" -> markdownRenderer
                 else -> plainRenderer
             }
         }

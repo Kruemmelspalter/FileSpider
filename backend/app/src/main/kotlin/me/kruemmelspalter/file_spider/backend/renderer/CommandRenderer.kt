@@ -22,24 +22,21 @@ class CommandRenderer(
 ) : TempFileRenderer {
     override fun render(document: Document, fsService: FileSystemService, tmpPath: Path): Optional<RenderedDocument> {
         var command = commandTemplate
-        if (command.contains("%file%"))
-            command = command.replace("%file%", document.id.toString())
+        if (command.contains("%file%")) command = command.replace("%file%", document.id.toString())
         else command += " " + document.id.toString()
 
         var generatedFileName = generatedFileNameTemplate
         if (generatedFileName.contains("%file%")) generatedFileName =
             generatedFileName.replace("%file%", document.id.toString())
 
-        val process = ProcessBuilder(
-            "bash", "-c", "($command)2>&1 >" + fsService.getLogPathFromID(document.id)
-        )
-            .directory(File(tmpPath.toString())).start()
+        val process = ProcessBuilder("bash", "-c", command).redirectErrorStream(true)
+            .redirectOutput(File(fsService.getLogPathFromID(document.id).toUri())).directory(File(tmpPath.toString()))
+            .start()
 
         if (!process.waitFor(
-                timeout,
-                TimeUnit.SECONDS
+                timeout, TimeUnit.SECONDS
             ) || process.exitValue() != 0
-        ) throw RenderingException(String(fsService!!.readLog(document.id).get().readAllBytes()))
+        ) throw RenderingException(fsService.readLog(document.id).map { String(it.readAllBytes()) }.orElseGet { "" })
 
         return Optional.of(
             RenderedDocument(

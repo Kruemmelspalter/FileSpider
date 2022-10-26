@@ -12,7 +12,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
-import java.util.Optional
 import java.util.UUID
 
 @Service
@@ -75,9 +74,9 @@ class FileSystemService {
         return Paths.get(tmpDirectory.toString(), "$id.log").toAbsolutePath()
     }
 
-    fun readLog(id: UUID): Optional<InputStream> {
+    fun readLog(id: UUID): InputStream? {
         val file = File(getLogPathFromID(id).toString())
-        return if (!file.exists()) Optional.empty()
-        else Optional.of(FileInputStream(file))
+        return if (!file.exists()) null
+        else FileInputStream(file)
     }
 }

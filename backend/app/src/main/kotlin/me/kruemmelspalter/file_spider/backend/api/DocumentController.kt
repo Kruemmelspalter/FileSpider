@@ -48,26 +48,22 @@ class DocumentController {
 
     @GetMapping("/{id}")
     fun getDocumentMeta(@PathVariable("id") documentId: UUID): DocumentMeta {
-        return documentService!!.getDocumentMeta(documentId)
-            .orElseThrow {
-                ResponseStatusException(HttpStatus.NOT_FOUND)
-            }
+        return documentService!!.getDocumentMeta(documentId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
     }
 
     @GetMapping("/{id}/rendered")
     fun getRenderedDocument(
         @PathVariable("id") documentId: UUID,
-        @RequestParam("download") download: Optional<Boolean>
+        @RequestParam("download") download: Boolean?
     ): ResponseEntity<Resource> {
 
-        val renderedDocument: RenderedDocument = documentService!!.renderDocument(documentId).orElseThrow {
-            ResponseStatusException(HttpStatus.NOT_FOUND)
-        }
+        val renderedDocument: RenderedDocument =
+            documentService!!.renderDocument(documentId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
         val headers = HttpHeaders()
         headers.contentType = MediaType.parseMediaType(renderedDocument.contentType)
         headers.contentLength = renderedDocument.contentLength
-        if (download.orElseGet { false }) headers.contentDisposition =
+        if (download == true) headers.contentDisposition =
             ContentDisposition.parse("attachment; filename=" + renderedDocument.fileName)
 
         return ResponseEntity
@@ -78,9 +74,9 @@ class DocumentController {
 
     @GetMapping("/{id}/renderlog")
     fun getRenderLog(@PathVariable id: UUID): InputStreamResource {
-        val log = documentService!!.readDocumentLog(id)
-        if (log.isEmpty) throw ResponseStatusException(HttpStatus.NOT_FOUND)
-        return InputStreamResource(log.get())
+        return InputStreamResource(
+            documentService!!.readDocumentLog(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        )
     }
 
     @ExceptionHandler(value = [RenderingException::class])

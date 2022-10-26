@@ -19,12 +19,12 @@ class DocumentRepository : DocumentDao {
     @Autowired
     val namedParameterJdbcOperations: NamedParameterJdbcOperations? = null
 
-    override fun getDocument(id: UUID): Optional<Document> {
+    override fun getDocument(id: UUID): Document? {
         val documents = jdbcTemplate!!.query(
             "select * from Document where id = ?", { rs, _ -> documentFromResultSet(rs) }, id.toString()
         )
-        if (documents.size != 1) return Optional.empty()
-        return Optional.of(documents[0])
+        if (documents.size != 1) return null
+        return documents[0]
     }
 
     override fun getTags(id: UUID): List<String> {

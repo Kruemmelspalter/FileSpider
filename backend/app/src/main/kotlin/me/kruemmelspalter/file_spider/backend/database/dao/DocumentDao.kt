@@ -6,7 +6,7 @@ import java.util.UUID
 
 interface DocumentDao {
 
-    fun getDocument(id: UUID): Optional<Document>
+    fun getDocument(id: UUID): Document?
 
     fun getTags(id: UUID): List<String>
 

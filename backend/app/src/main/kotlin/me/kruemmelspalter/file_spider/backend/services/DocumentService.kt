@@ -18,9 +18,9 @@ class DocumentService {
     @Autowired
     val fsService: FileSystemService? = null
 
-    fun getDocumentMeta(id: UUID): Optional<DocumentMeta> {
+    fun getDocumentMeta(id: UUID): DocumentMeta? {
         val document = documentRepository!!.getDocument(id)
-        return if (document.isEmpty) Optional.empty() else Optional.of(documentToMeta(document.get()))
+        return documentToMeta(document ?: return null)
     }
 
     private fun documentToMeta(document: Document): DocumentMeta {
@@ -38,15 +38,31 @@ class DocumentService {
         return documentRepository!!.filterDocuments(posFilter, negFilter).map { documentToMeta(it) }
     }
 
-    fun renderDocument(id: UUID): Optional<RenderedDocument> {
+    fun renderDocument(id: UUID): RenderedDocument? {
         val document = documentRepository!!.getDocument(id)
-        return if (document.isEmpty) Optional.empty()
-        else Renderer.getRenderer(document.get().renderer).render(document.get(), fsService!!)
+        return if (document == null) null else Renderer.getRenderer(document.renderer).render(document, fsService!!)
     }
 
-    fun readDocumentLog(id: UUID): Optional<InputStream> {
-        val document = documentRepository!!.getDocument(id)
-        return if (document.isEmpty) Optional.empty()
-        else fsService!!.readLog(id)
+    fun readDocumentLog(id: UUID): InputStream? {
+        documentRepository!!.getDocument(id) ?: return null
+
+        return fsService!!.readLog(id)
+    }
+
+    fun createDocument(
+        title: String?,
+        renderer: String?,
+        editor: String?,
+        mimeType: String,
+        tags: List<String>?,
+        content: InputStream?,
+    ): UUID {
+        return documentRepository!!.createDocument(
+            title ?: "Untitled",
+            renderer ?: "plain",
+            editor ?: "text",
+            mimeType,
+            tags ?: listOf(),
+        )
     }
 }

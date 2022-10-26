@@ -6,14 +6,12 @@ import me.kruemmelspalter.file_spider.backend.services.RenderedDocument
 import java.util.Optional
 
 class PlainRenderer : Renderer {
-    override fun render(document: Document, fsService: FileSystemService): Optional<RenderedDocument> {
-        return Optional.of(
-            RenderedDocument(
-                fsService.getInputStreamFromID(document.id),
-                document.mimeType,
-                fsService.getFileAttributesFromID(document.id).size(),
-                document.id.toString() + if (document.fileExtension != "") "." + document.fileExtension else ""
-            )
+    override fun render(document: Document, fsService: FileSystemService): RenderedDocument {
+        return RenderedDocument(
+            fsService.getInputStreamFromID(document.id),
+            document.mimeType,
+            fsService.getFileAttributesFromID(document.id).size(),
+            document.id.toString() + if (document.fileExtension != "") "." + document.fileExtension else ""
         )
     }
 }

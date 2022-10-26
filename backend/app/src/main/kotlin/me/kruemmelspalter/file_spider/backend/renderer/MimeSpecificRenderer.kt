@@ -6,7 +6,7 @@ import me.kruemmelspalter.file_spider.backend.services.RenderedDocument
 import java.util.Optional
 
 class MimeSpecificRenderer : Renderer {
-    override fun render(document: Document, fsService: FileSystemService): Optional<RenderedDocument> {
+    override fun render(document: Document, fsService: FileSystemService): RenderedDocument? {
         return Renderer.getRenderer(
             when (document.mimeType) {
                 "application/x-tex" -> "latex"

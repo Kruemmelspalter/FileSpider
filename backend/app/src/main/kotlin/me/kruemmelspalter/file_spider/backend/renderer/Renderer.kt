@@ -26,8 +26,8 @@ interface Renderer {
             "pandoc -f markdown -o out.html %file%",
             "out.html",
             "html",
-            "test/html",
-            1
+            "text/html",
+            1,
         )
         private val mimeSpecificRenderer = MimeSpecificRenderer()
         fun getRenderer(renderer: String): Renderer {
@@ -42,5 +42,5 @@ interface Renderer {
         }
     }
 
-    fun render(document: Document, fsService: FileSystemService): Optional<RenderedDocument>
+    fun render(document: Document, fsService: FileSystemService): RenderedDocument?
 }

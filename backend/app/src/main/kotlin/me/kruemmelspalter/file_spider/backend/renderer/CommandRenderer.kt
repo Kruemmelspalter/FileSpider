@@ -20,7 +20,7 @@ class CommandRenderer(
     private val mimeType: String,
     private val timeout: Long,
 ) : TempFileRenderer {
-    override fun render(document: Document, fsService: FileSystemService, tmpPath: Path): Optional<RenderedDocument> {
+    override fun render(document: Document, fsService: FileSystemService, tmpPath: Path): RenderedDocument {
         var command = commandTemplate
         if (command.contains("%file%")) command = command.replace("%file%", document.id.toString())
         else command += " " + document.id.toString()
@@ -36,16 +36,14 @@ class CommandRenderer(
         if (!process.waitFor(
                 timeout, TimeUnit.SECONDS
             ) || process.exitValue() != 0
-        ) throw RenderingException(fsService.readLog(document.id).map { String(it.readAllBytes()) }.orElseGet { "" })
+        ) throw RenderingException(String(fsService.readLog(document.id)?.readAllBytes() ?: byteArrayOf()))
 
-        return Optional.of(
-            RenderedDocument(
-                FileInputStream(File(tmpPath.toString(), generatedFileName)),
-                mimeType,
-                Files.readAttributes(Paths.get(tmpPath.toString(), generatedFileName), BasicFileAttributes::class.java)
-                    .size(),
-                document.id.toString() + "." + fileExtension
-            )
+        return RenderedDocument(
+            FileInputStream(File(tmpPath.toString(), generatedFileName)),
+            mimeType,
+            Files.readAttributes(Paths.get(tmpPath.toString(), generatedFileName), BasicFileAttributes::class.java)
+                .size(),
+            document.id.toString() + "." + fileExtension
         )
     }
 }

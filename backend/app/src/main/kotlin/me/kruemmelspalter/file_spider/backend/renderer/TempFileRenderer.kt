@@ -12,7 +12,7 @@ import java.util.Optional
 
 interface TempFileRenderer : Renderer {
 
-    override fun render(document: Document, fsService: FileSystemService): Optional<RenderedDocument> {
+    override fun render(document: Document, fsService: FileSystemService): RenderedDocument? {
         val tmpPath = Paths.get(
             fsService.getTemporaryDirectory().toString(),
             "filespider-${document.id}-${Date().time}"
@@ -27,5 +27,5 @@ interface TempFileRenderer : Renderer {
         return renderedDocument
     }
 
-    fun render(document: Document, fsService: FileSystemService, tmpPath: Path): Optional<RenderedDocument>
+    fun render(document: Document, fsService: FileSystemService, tmpPath: Path): RenderedDocument?
 }

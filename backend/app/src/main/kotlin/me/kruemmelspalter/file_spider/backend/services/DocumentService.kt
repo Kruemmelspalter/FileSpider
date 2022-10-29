@@ -1,5 +1,6 @@
 package me.kruemmelspalter.file_spider.backend.services
 
+import com.fasterxml.uuid.Generators
 import me.kruemmelspalter.file_spider.backend.database.dao.DocumentRepository
 import me.kruemmelspalter.file_spider.backend.database.model.Document
 import me.kruemmelspalter.file_spider.backend.renderer.Renderer
@@ -7,11 +8,13 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.io.InputStream
 import java.sql.Timestamp
-import java.util.Optional
 import java.util.UUID
 
 @Service
 class DocumentService {
+
+    private val uuidGenerator = Generators.timeBasedGenerator()!!
+
     @Autowired
     val documentRepository: DocumentRepository? = null
 
@@ -57,12 +60,23 @@ class DocumentService {
         tags: List<String>?,
         content: InputStream?,
     ): UUID {
-        return documentRepository!!.createDocument(
+        val uuid = uuidGenerator.generate()
+
+        documentRepository!!.createDocument(
+            uuid,
             title ?: "Untitled",
             renderer ?: "plain",
             editor ?: "text",
             mimeType,
             tags ?: listOf(),
         )
+
+        fsService!!.createDocument(uuid)
+        if (content != null) {
+            fsService!!.writeToDocument(uuid, content)
+            content.close()
+        }
+
+        return uuid
     }
 }

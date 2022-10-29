@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.FileReader
 import java.io.InputStream
 import java.nio.file.Files
@@ -42,7 +43,7 @@ class FileSystemService {
     }
 
     fun getFileFromID(id: UUID): File {
-        return File(getDocumentPathFromID(id).toUri())
+        return getDocumentPathFromID(id).toFile()
     }
 
     fun getInputStreamFromID(id: UUID): InputStream {
@@ -78,5 +79,18 @@ class FileSystemService {
         val file = File(getLogPathFromID(id).toString())
         return if (!file.exists()) null
         else FileInputStream(file)
+    }
+
+    fun createDocument(id: UUID) {
+        val directory = getDirectoryPathFromID(id).toFile()
+        if (!directory.mkdir()) throw Error("could not create document directory")
+        val file = getFileFromID(id)
+        if (!file.createNewFile()) throw Error("could not create document file")
+    }
+
+    fun writeToDocument(id: UUID, stream: InputStream) {
+        val outStream = FileOutputStream(getFileFromID(id))
+        stream.transferTo(outStream)
+        outStream.close()
     }
 }

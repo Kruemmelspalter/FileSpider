@@ -46,6 +46,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     implementation("org.mybatis:mybatis:3.4.5")
     implementation("com.typesafe:config:1.4.2")
+
+    implementation("com.fasterxml.uuid:java-uuid-generator:3.1.5")
 }
 
 application {

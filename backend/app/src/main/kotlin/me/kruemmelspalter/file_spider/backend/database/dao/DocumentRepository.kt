@@ -7,7 +7,6 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations
 import org.springframework.stereotype.Repository
 import java.sql.ResultSet
-import java.util.Optional
 import java.util.UUID
 
 @Repository
@@ -31,10 +30,6 @@ class DocumentRepository : DocumentDao {
         return jdbcTemplate!!.query(
             "select tag from Tag where document = ?", { rs, _ -> rs.getString(1) }, id.toString()
         )
-    }
-
-    override fun insertDocument(document: Document) {
-        TODO("Not yet implemented")
     }
 
     override fun deleteDocument(id: UUID) {
@@ -66,4 +61,28 @@ class DocumentRepository : DocumentDao {
         rs.getString(6),
         rs.getString(7)
     )
+
+    override fun createDocument(
+        uuid: UUID,
+        title: String,
+        renderer: String,
+        editor: String,
+        mimeType: String,
+        tags: List<String>
+    ) {
+
+        if (jdbcTemplate!!.update(
+                "insert into Document (id, title, renderer, editor, mimeType) values (?,?,?,?,?)",
+                uuid.toString(),
+                title,
+                renderer,
+                editor,
+                mimeType
+            ) != 1
+        ) throw RuntimeException("document creation did not work / didn't affect one row")
+
+        jdbcTemplate!!.batchUpdate("insert into Tag (tag, document) values (?, ?)", tags, 100) { ps, s ->
+            ps.setString(1, s); ps.setString(2, uuid.toString())
+        }
+    }
 }

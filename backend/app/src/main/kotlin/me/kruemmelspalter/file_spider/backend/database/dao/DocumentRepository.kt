@@ -33,7 +33,8 @@ class DocumentRepository : DocumentDao {
     }
 
     override fun deleteDocument(id: UUID) {
-        TODO("Not yet implemented")
+        jdbcTemplate!!.update("delete from Document where id=?", id.toString())
+        jdbcTemplate!!.update("delete from Tag where document=?", id.toString())
     }
 
     override fun filterDocuments(posFilter: List<String>, negFilter: List<String>): List<Document> {

@@ -87,4 +87,9 @@ class DocumentService {
     fun removeTags(id: UUID, removeTags: List<String>) {
         documentRepository!!.removeTags(id, removeTags)
     }
+
+    fun deleteDocument(id: UUID) {
+        documentRepository!!.deleteDocument(id)
+        fsService!!.deleteDocument(id)
+    }
 }

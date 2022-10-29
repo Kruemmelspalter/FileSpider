@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -75,6 +76,11 @@ class DocumentController {
     fun changeDocumentTags(@PathVariable id: UUID, @RequestBody change: DocumentChange) {
         if (change.addTags != null) documentService!!.addTags(id, change.addTags)
         if (change.removeTags != null) documentService!!.removeTags(id, change.removeTags)
+    }
+
+    @DeleteMapping("/{id}")
+    fun deleteDocument(@PathVariable id: UUID) {
+        documentService!!.deleteDocument(id)
     }
 
     @GetMapping("/{id}/rendered")

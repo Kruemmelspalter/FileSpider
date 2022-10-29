@@ -3,6 +3,7 @@ package me.kruemmelspalter.file_spider.backend.services
 import com.typesafe.config.ConfigFactory
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import org.springframework.util.FileSystemUtils
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileInputStream
@@ -76,7 +77,7 @@ class FileSystemService {
     }
 
     fun readLog(id: UUID): InputStream? {
-        val file = File(getLogPathFromID(id).toString())
+        val file = getLogPathFromID(id).toFile()
         return if (!file.exists()) null
         else FileInputStream(file)
     }
@@ -92,5 +93,9 @@ class FileSystemService {
         val outStream = FileOutputStream(getFileFromID(id))
         stream.transferTo(outStream)
         outStream.close()
+    }
+
+    fun deleteDocument(id: UUID) {
+        FileSystemUtils.deleteRecursively(getDirectoryPathFromID(id))
     }
 }

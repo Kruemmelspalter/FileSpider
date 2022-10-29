@@ -79,4 +79,12 @@ class DocumentService {
 
         return uuid
     }
+
+    fun addTags(id: UUID, addTags: List<String>) {
+        documentRepository!!.addTags(id, addTags)
+    }
+
+    fun removeTags(id: UUID, removeTags: List<String>) {
+        documentRepository!!.removeTags(id, removeTags)
+    }
 }

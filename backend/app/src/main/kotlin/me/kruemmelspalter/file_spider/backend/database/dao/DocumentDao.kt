@@ -21,4 +21,6 @@ interface DocumentDao {
     fun deleteDocument(id: UUID)
 
     fun filterDocuments(posFilter: List<String>, negFilter: List<String>): List<Document>
+    fun removeTags(id: UUID, removeTags: List<String>)
+    fun addTags(id: UUID, addTags: List<String>)
 }

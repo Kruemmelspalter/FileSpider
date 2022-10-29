@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -66,6 +67,14 @@ class DocumentController {
     @GetMapping("/{id}")
     fun getDocumentMeta(@PathVariable("id") documentId: UUID): DocumentMeta {
         return documentService!!.getDocumentMeta(documentId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+    }
+
+    data class DocumentChange(val addTags: List<String>?, val removeTags: List<String>?)
+
+    @PostMapping("/{id}")
+    fun changeDocumentTags(@PathVariable id: UUID, @RequestBody change: DocumentChange) {
+        if (change.addTags != null) documentService!!.addTags(id, change.addTags)
+        if (change.removeTags != null) documentService!!.removeTags(id, change.removeTags)
     }
 
     @GetMapping("/{id}/rendered")

@@ -52,6 +52,18 @@ class DocumentRepository : DocumentDao {
         ) { rs, _ -> documentFromResultSet(rs) }
     }
 
+    override fun removeTags(id: UUID, removeTags: List<String>) {
+        jdbcTemplate!!.batchUpdate("delete from Tag where document=? and tag=?", removeTags, 100) { ps, s ->
+            ps.setString(1, id.toString()); ps.setString(2, s)
+        }
+    }
+
+    override fun addTags(id: UUID, addTags: List<String>) {
+        jdbcTemplate!!.batchUpdate("insert into Tag(document, tag) values (?,?)", addTags, 100) { ps, s ->
+            ps.setString(1, id.toString()); ps.setString(2, s)
+        }
+    }
+
     private fun documentFromResultSet(rs: ResultSet) = Document(
         UUID.fromString(rs.getString(1)),
         rs.getString(2),

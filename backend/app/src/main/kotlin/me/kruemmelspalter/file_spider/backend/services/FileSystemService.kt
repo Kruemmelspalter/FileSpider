@@ -3,16 +3,17 @@ package me.kruemmelspalter.file_spider.backend.services
 import com.typesafe.config.ConfigFactory
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import org.springframework.util.FileSystemUtils
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.FileReader
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
-import java.util.Optional
 import java.util.UUID
 
 @Service
@@ -43,7 +44,7 @@ class FileSystemService {
     }
 
     fun getFileFromID(id: UUID): File {
-        return File(getDocumentPathFromID(id).toUri())
+        return getDocumentPathFromID(id).toFile()
     }
 
     fun getInputStreamFromID(id: UUID): InputStream {
@@ -75,9 +76,26 @@ class FileSystemService {
         return Paths.get(tmpDirectory.toString(), "$id.log").toAbsolutePath()
     }
 
-    fun readLog(id: UUID): Optional<InputStream> {
-        val file = File(getLogPathFromID(id).toString())
-        return if (!file.exists()) Optional.empty()
-        else Optional.of(FileInputStream(file))
+    fun readLog(id: UUID): InputStream? {
+        val file = getLogPathFromID(id).toFile()
+        return if (!file.exists()) null
+        else FileInputStream(file)
+    }
+
+    fun createDocument(id: UUID) {
+        val directory = getDirectoryPathFromID(id).toFile()
+        if (!directory.mkdir()) throw Error("could not create document directory")
+        val file = getFileFromID(id)
+        if (!file.createNewFile()) throw Error("could not create document file")
+    }
+
+    fun writeToDocument(id: UUID, stream: InputStream) {
+        val outStream = FileOutputStream(getFileFromID(id))
+        stream.transferTo(outStream)
+        outStream.close()
+    }
+
+    fun deleteDocument(id: UUID) {
+        FileSystemUtils.deleteRecursively(getDirectoryPathFromID(id))
     }
 }

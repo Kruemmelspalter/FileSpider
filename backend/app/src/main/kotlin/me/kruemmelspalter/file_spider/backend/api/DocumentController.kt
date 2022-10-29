@@ -12,14 +12,18 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.server.ResponseStatusException
-import java.util.Optional
 import java.util.UUID
 import java.util.regex.Pattern
 
@@ -46,28 +50,53 @@ class DocumentController {
         )
     }
 
+    @PostMapping("/", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun createDocument(
+        @RequestParam file: MultipartFile?,
+        @RequestParam title: String?,
+        @RequestParam renderer: String?,
+        @RequestParam editor: String?,
+        @RequestParam tags: List<String>?,
+        @RequestParam mimeType: String?
+    ): String {
+        if (!((file == null) xor (mimeType == null))) throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+        val uuid = if (mimeType == null)
+            documentService!!.createDocument(title, renderer, editor, file?.contentType!!, tags, file.inputStream)
+        else documentService!!.createDocument(title, renderer, editor, mimeType, tags, null)
+        return uuid.toString()
+    }
+
     @GetMapping("/{id}")
     fun getDocumentMeta(@PathVariable("id") documentId: UUID): DocumentMeta {
-        return documentService!!.getDocumentMeta(documentId)
-            .orElseThrow {
-                ResponseStatusException(HttpStatus.NOT_FOUND)
-            }
+        return documentService!!.getDocumentMeta(documentId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+    }
+
+    data class DocumentChange(val addTags: List<String>?, val removeTags: List<String>?)
+
+    @PatchMapping("/{id}")
+    fun changeDocumentTags(@PathVariable id: UUID, @RequestBody change: DocumentChange) {
+        if (change.addTags != null) documentService!!.addTags(id, change.addTags)
+        if (change.removeTags != null) documentService!!.removeTags(id, change.removeTags)
+    }
+
+    @DeleteMapping("/{id}")
+    fun deleteDocument(@PathVariable id: UUID) {
+        documentService!!.deleteDocument(id)
     }
 
     @GetMapping("/{id}/rendered")
     fun getRenderedDocument(
         @PathVariable("id") documentId: UUID,
-        @RequestParam("download") download: Optional<Boolean>
+        @RequestParam("download") download: Boolean?
     ): ResponseEntity<Resource> {
 
-        val renderedDocument: RenderedDocument = documentService!!.renderDocument(documentId).orElseThrow {
-            ResponseStatusException(HttpStatus.NOT_FOUND)
-        }
+        val renderedDocument: RenderedDocument =
+            documentService!!.renderDocument(documentId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
         val headers = HttpHeaders()
         headers.contentType = MediaType.parseMediaType(renderedDocument.contentType)
         headers.contentLength = renderedDocument.contentLength
-        if (download.orElseGet { false }) headers.contentDisposition =
+        if (download == true) headers.contentDisposition =
             ContentDisposition.parse("attachment; filename=" + renderedDocument.fileName)
 
         return ResponseEntity
@@ -78,9 +107,9 @@ class DocumentController {
 
     @GetMapping("/{id}/renderlog")
     fun getRenderLog(@PathVariable id: UUID): InputStreamResource {
-        val log = documentService!!.readDocumentLog(id)
-        if (log.isEmpty) throw ResponseStatusException(HttpStatus.NOT_FOUND)
-        return InputStreamResource(log.get())
+        return InputStreamResource(
+            documentService!!.readDocumentLog(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        )
     }
 
     @ExceptionHandler(value = [RenderingException::class])

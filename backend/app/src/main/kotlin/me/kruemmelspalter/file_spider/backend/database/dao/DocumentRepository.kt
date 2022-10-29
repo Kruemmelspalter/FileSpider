@@ -7,7 +7,6 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations
 import org.springframework.stereotype.Repository
 import java.sql.ResultSet
-import java.util.Optional
 import java.util.UUID
 
 @Repository
@@ -19,12 +18,12 @@ class DocumentRepository : DocumentDao {
     @Autowired
     val namedParameterJdbcOperations: NamedParameterJdbcOperations? = null
 
-    override fun getDocument(id: UUID): Optional<Document> {
+    override fun getDocument(id: UUID): Document? {
         val documents = jdbcTemplate!!.query(
             "select * from Document where id = ?", { rs, _ -> documentFromResultSet(rs) }, id.toString()
         )
-        if (documents.size != 1) return Optional.empty()
-        return Optional.of(documents[0])
+        if (documents.size != 1) return null
+        return documents[0]
     }
 
     override fun getTags(id: UUID): List<String> {
@@ -33,12 +32,9 @@ class DocumentRepository : DocumentDao {
         )
     }
 
-    override fun insertDocument(document: Document) {
-        TODO("Not yet implemented")
-    }
-
     override fun deleteDocument(id: UUID) {
-        TODO("Not yet implemented")
+        jdbcTemplate!!.update("delete from Document where id=?", id.toString())
+        jdbcTemplate!!.update("delete from Tag where document=?", id.toString())
     }
 
     override fun filterDocuments(posFilter: List<String>, negFilter: List<String>): List<Document> {
@@ -57,6 +53,18 @@ class DocumentRepository : DocumentDao {
         ) { rs, _ -> documentFromResultSet(rs) }
     }
 
+    override fun removeTags(id: UUID, removeTags: List<String>) {
+        jdbcTemplate!!.batchUpdate("delete from Tag where document=? and tag=?", removeTags, 100) { ps, s ->
+            ps.setString(1, id.toString()); ps.setString(2, s)
+        }
+    }
+
+    override fun addTags(id: UUID, addTags: List<String>) {
+        jdbcTemplate!!.batchUpdate("insert into Tag(document, tag) values (?,?)", addTags, 100) { ps, s ->
+            ps.setString(1, id.toString()); ps.setString(2, s)
+        }
+    }
+
     private fun documentFromResultSet(rs: ResultSet) = Document(
         UUID.fromString(rs.getString(1)),
         rs.getString(2),
@@ -66,4 +74,28 @@ class DocumentRepository : DocumentDao {
         rs.getString(6),
         rs.getString(7)
     )
+
+    override fun createDocument(
+        uuid: UUID,
+        title: String,
+        renderer: String,
+        editor: String,
+        mimeType: String,
+        tags: List<String>
+    ) {
+
+        if (jdbcTemplate!!.update(
+                "insert into Document (id, title, renderer, editor, mimeType) values (?,?,?,?,?)",
+                uuid.toString(),
+                title,
+                renderer,
+                editor,
+                mimeType
+            ) != 1
+        ) throw RuntimeException("document creation did not work / didn't affect one row")
+
+        jdbcTemplate!!.batchUpdate("insert into Tag (tag, document) values (?, ?)", tags, 100) { ps, s ->
+            ps.setString(1, s); ps.setString(2, uuid.toString())
+        }
+    }
 }

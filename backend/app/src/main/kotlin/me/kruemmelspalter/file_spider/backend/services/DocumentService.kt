@@ -1,5 +1,6 @@
 package me.kruemmelspalter.file_spider.backend.services
 
+import com.fasterxml.uuid.Generators
 import me.kruemmelspalter.file_spider.backend.database.dao.DocumentRepository
 import me.kruemmelspalter.file_spider.backend.database.model.Document
 import me.kruemmelspalter.file_spider.backend.renderer.Renderer
@@ -7,20 +8,22 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.io.InputStream
 import java.sql.Timestamp
-import java.util.Optional
 import java.util.UUID
 
 @Service
 class DocumentService {
+
+    private val uuidGenerator = Generators.timeBasedGenerator()!!
+
     @Autowired
     val documentRepository: DocumentRepository? = null
 
     @Autowired
     val fsService: FileSystemService? = null
 
-    fun getDocumentMeta(id: UUID): Optional<DocumentMeta> {
+    fun getDocumentMeta(id: UUID): DocumentMeta? {
         val document = documentRepository!!.getDocument(id)
-        return if (document.isEmpty) Optional.empty() else Optional.of(documentToMeta(document.get()))
+        return documentToMeta(document ?: return null)
     }
 
     private fun documentToMeta(document: Document): DocumentMeta {
@@ -38,15 +41,55 @@ class DocumentService {
         return documentRepository!!.filterDocuments(posFilter, negFilter).map { documentToMeta(it) }
     }
 
-    fun renderDocument(id: UUID): Optional<RenderedDocument> {
+    fun renderDocument(id: UUID): RenderedDocument? {
         val document = documentRepository!!.getDocument(id)
-        return if (document.isEmpty) Optional.empty()
-        else Renderer.getRenderer(document.get().renderer).render(document.get(), fsService!!)
+        return if (document == null) null else Renderer.getRenderer(document.renderer).render(document, fsService!!)
     }
 
-    fun readDocumentLog(id: UUID): Optional<InputStream> {
-        val document = documentRepository!!.getDocument(id)
-        return if (document.isEmpty) Optional.empty()
-        else fsService!!.readLog(id)
+    fun readDocumentLog(id: UUID): InputStream? {
+        documentRepository!!.getDocument(id) ?: return null
+
+        return fsService!!.readLog(id)
+    }
+
+    fun createDocument(
+        title: String?,
+        renderer: String?,
+        editor: String?,
+        mimeType: String,
+        tags: List<String>?,
+        content: InputStream?,
+    ): UUID {
+        val uuid = uuidGenerator.generate()
+
+        documentRepository!!.createDocument(
+            uuid,
+            title ?: "Untitled",
+            renderer ?: "plain",
+            editor ?: "text",
+            mimeType,
+            tags ?: listOf(),
+        )
+
+        fsService!!.createDocument(uuid)
+        if (content != null) {
+            fsService!!.writeToDocument(uuid, content)
+            content.close()
+        }
+
+        return uuid
+    }
+
+    fun addTags(id: UUID, addTags: List<String>) {
+        documentRepository!!.addTags(id, addTags)
+    }
+
+    fun removeTags(id: UUID, removeTags: List<String>) {
+        documentRepository!!.removeTags(id, removeTags)
+    }
+
+    fun deleteDocument(id: UUID) {
+        documentRepository!!.deleteDocument(id)
+        fsService!!.deleteDocument(id)
     }
 }

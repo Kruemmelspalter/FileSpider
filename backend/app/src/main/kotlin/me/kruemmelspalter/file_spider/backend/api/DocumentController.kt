@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -72,7 +73,7 @@ class DocumentController {
 
     data class DocumentChange(val addTags: List<String>?, val removeTags: List<String>?)
 
-    @PostMapping("/{id}")
+    @PatchMapping("/{id}")
     fun changeDocumentTags(@PathVariable id: UUID, @RequestBody change: DocumentChange) {
         if (change.addTags != null) documentService!!.addTags(id, change.addTags)
         if (change.removeTags != null) documentService!!.removeTags(id, change.removeTags)

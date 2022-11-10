@@ -1,9 +1,13 @@
 <template>
-  <v-card />
+  <Nuxt />
 </template>
 
 <script>
 export default {
-  name: 'IndexPage',
+  name: 'BlankLayout',
 }
 </script>
+
+<style scoped>
+
+</style>

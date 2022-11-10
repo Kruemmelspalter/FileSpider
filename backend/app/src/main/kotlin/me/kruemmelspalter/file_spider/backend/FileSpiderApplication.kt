@@ -17,8 +17,11 @@ class FileSpiderApplication {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val config = ConfigFactory.load()
 
-    @Autowired private val dataSource: DataSource? = null
-    @Autowired private val jdbcTemplate: JdbcTemplate? = null
+    @Autowired
+    private val dataSource: DataSource? = null
+
+    @Autowired
+    private val jdbcTemplate: JdbcTemplate? = null
 
     @EventListener(ApplicationReadyEvent::class)
     fun createTablesIfNonexistent() {
@@ -28,7 +31,10 @@ class FileSpiderApplication {
             if (rs.getInt(1) != 2) {
                 logger.warn("Not all tables 'Document' and 'Tag' exist; creating from init script")
                 try {
-                    ScriptUtils.executeSqlScript(dataSource!!.connection, ClassPathResource(config.getString("app.initFilePath")))
+                    ScriptUtils.executeSqlScript(
+                        dataSource!!.connection,
+                        ClassPathResource(config.getString("app.initFilePath"))
+                    )
                 } catch (e: Exception) {
                     logger.error("could not execute init script")
                     e.printStackTrace()

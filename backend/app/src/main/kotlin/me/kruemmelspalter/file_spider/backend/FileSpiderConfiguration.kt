@@ -14,6 +14,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.jdbc.datasource.DataSourceTransactionManager
 import org.springframework.jdbc.datasource.DriverManagerDataSource
 import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.web.servlet.config.annotation.CorsRegistry
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 import javax.sql.DataSource
@@ -58,5 +59,10 @@ class FileSpiderConfiguration : WebMvcConfigurer, WebServerFactoryCustomizer<Con
     @Bean
     fun jdbcTemplate(): JdbcTemplate {
         return JdbcTemplate(dataSource())
+    }
+
+    override fun addCorsMappings(registry: CorsRegistry) {
+        registry.addMapping("/**").allowedOrigins("*")
+        // TODO proper CORS, this is just for debugging / developing
     }
 }

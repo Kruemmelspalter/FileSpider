@@ -32,6 +32,14 @@
       </v-btn>
       <v-btn
         icon
+        @click="documentInvert = !documentInvert"
+      >
+        <v-icon :class="{turned: documentInvert}">
+          mdi-circle-half-full
+        </v-icon>
+      </v-btn>
+      <v-btn
+        icon
         @click="darkMode = !darkMode"
       >
         <v-icon>mdi-theme-light-dark</v-icon>
@@ -43,7 +51,7 @@
       <object
         v-show="iframeState === 1"
         id="document-content"
-        :class="{dark: darkMode}"
+        :class="{dark: documentInvert}"
         :data="`http://172.31.69.3/document/${documentID}/rendered`"
         @load="iframeState = 1"
       >
@@ -77,6 +85,7 @@ export default {
       searchTimeout: null,
       searchResults: [],
       showSearchError: false,
+      documentInvert: false,
     }
   },
   computed: {
@@ -150,6 +159,10 @@ export default {
 
 .turning {
   animation: 1s linear infinite rotate;
+}
+
+.turned {
+  transform: rotate(180deg);
 }
 
 @keyframes rotate {

@@ -4,12 +4,15 @@ import com.typesafe.config.ConfigFactory
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.autoconfigure.web.servlet.DispatcherServletAutoConfiguration
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.boot.runApplication
+import org.springframework.context.annotation.Bean
 import org.springframework.context.event.EventListener
 import org.springframework.core.io.ClassPathResource
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.datasource.init.ScriptUtils
+import org.springframework.web.servlet.DispatcherServlet
 import javax.sql.DataSource
 
 @SpringBootApplication
@@ -41,6 +44,13 @@ class FileSpiderApplication {
                 }
             }
         }
+    }
+
+    @Bean(name = [DispatcherServletAutoConfiguration.DEFAULT_DISPATCHER_SERVLET_BEAN_NAME])
+    fun dispatcherServlet(): DispatcherServlet? {
+        val dispatcherServlet = DispatcherServlet()
+        dispatcherServlet.setDispatchOptionsRequest(true)
+        return dispatcherServlet
     }
 }
 

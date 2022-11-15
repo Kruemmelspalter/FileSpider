@@ -28,13 +28,13 @@ class Renderer {
         }
         private val markdownRenderer =
             Renderer().tempDir().replace(mapOf("->" to "$\\rightarrow$", "=>" to "$\\Rightarrow$"))
-                .command(10) { "pandoc -f markdown -o out.html ${it.document.id}" }
+                .command(10) { "pandoc -f markdown -o out.html -s --katex='https://cdn.jsdelivr.net/npm/katex@0.16.3/dist/' ${it.document.id}" }
                 .outputFile("text/html", "html") { "out.html" }
         private val latexRenderer = Renderer().tempDir().command(10) {
             "pdflatex -draftmode -halt-on-error ${it.document.id} && pdflatex -halt-on-error ${it.document.id}"
         }.outputFile("application/pdf", "pdf") { "${it.document.id}.pdf" }
         private val xournalppRenderer = Renderer().tempDir().command(10) { "xournalpp -p out.pdf ${it.document.id}" }
-            .outputFile("application/pdf", "pdf") { "${it.document.id}.pdf" }
+            .outputFile("application/pdf", "pdf") { "out.pdf" }
 
         fun getRenderer(rendererName: String): Renderer {
             return when (rendererName) {

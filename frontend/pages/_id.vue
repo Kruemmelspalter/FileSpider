@@ -1,21 +1,35 @@
 <template>
   <v-app dark>
     <v-navigation-drawer app class="px-3">
-      <v-form>
+      <v-form
+        ref="form"
+        @submit.prevent="commitSearch"
+      >
         <v-text-field
           v-model="search"
           label="Search"
           prepend-icon="mdi-file-search"
+          @input="onSearchChange"
+          @click:prepend="commitSearch"
         />
+        <v-banner v-show="showSearchError" color="error" icon="mdi-alert">
+          Search Error
+        </v-banner>
       </v-form>
       <v-list>
-        <v-list-item link>
-          a
+        <v-list-item v-for="r in searchResults" :key="r.id" :to="r.id" link nuxt>
+          {{ r.title }}
         </v-list-item>
       </v-list>
     </v-navigation-drawer>
 
     <v-system-bar class="justify-end" color="primary">
+      <v-btn
+        icon
+        @click="reload()"
+      >
+        <v-icon>mdi-reload</v-icon>
+      </v-btn>
       <v-btn
         icon
         @click="darkMode = !darkMode"
@@ -28,12 +42,12 @@
     <v-main>
       <object
         v-show="iframeState === 1"
+        id="document-content"
         :class="{dark: darkMode}"
-        :data="`http://172.31.69.3/document/${$route.params.id}/rendered`"
-        class="document-content"
+        :data="`http://172.31.69.3/document/${documentID}/rendered`"
         @load="iframeState = 1"
       >
-        <v-banner color="error" icon="mdi-error">Error loading document</v-banner>
+        <v-banner color="error" icon="mdi-alert">Error loading document</v-banner>
       </object>
       <v-banner v-if="iframeState === 0" color="secondary">
         <v-icon class="turning">
@@ -41,10 +55,14 @@
         </v-icon>
         Loading...
       </v-banner>
+      <v-banner v-if="iframeState===2" color="error" icon="mdi-alert">
+        Error loading document (timeout)
+      </v-banner>
     </v-main>
   </v-app>
 </template>
 
+<!--suppress SillyAssignmentJS -->
 <script>
 export default {
   name: 'DocumentViewer',
@@ -56,12 +74,21 @@ export default {
       search: '',
       time: null,
       interval: null,
+      searchTimeout: null,
+      searchResults: [],
+      showSearchError: false,
     }
+  },
+  computed: {
+    documentID () {
+      return this.$route.params.id
+    },
   },
   watch: {
     darkMode (newVal, _) {
       this.$vuetify.theme.dark = newVal
     },
+
   },
   created () {
     this.interval = setInterval(() => {
@@ -71,16 +98,48 @@ export default {
         second: 'numeric',
       }).format()
     }, 1000)
+    setTimeout(() => {
+      if (this.iframeState === 0) {
+        this.iframeState = 2
+      }
+    }, 1e4) // TODO adjust timeout?
   },
   beforeDestroy () {
     // prevent memory leak
     clearInterval(this.interval)
   },
+  methods: {
+    reload () {
+      this.iframeState = 0
+      document.getElementById('document-content').data = document.getElementById('document-content').data
+    },
+    commitSearch () {
+      if (this.searchTimeout !== null) {
+        clearTimeout(this.searchTimeout)
+      }
+      this.$axios.$get(`http://172.31.69.3:80/document/?filter=${this.search}`)
+        .then((results) => {
+          this.showSearchError = false
+          this.searchResults = results
+        })
+        .catch((_) => {
+          this.showSearchError = true
+          this.searchResults = []
+        })
+    },
+    onSearchChange () {
+      if (this.searchTimeout !== null) {
+        clearTimeout(this.searchTimeout)
+      }
+      this.searchTimeout = setTimeout(this.commitSearch, 3000)
+      this.showSearchError = false
+    },
+  },
 }
 </script>
 
 <style scoped>
-.document-content {
+#document-content {
   width: 100%;
   height: 99vh;
 }

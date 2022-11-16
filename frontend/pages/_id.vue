@@ -52,7 +52,7 @@
         v-show="iframeState === 1"
         id="document-content"
         :class="{dark: documentInvert}"
-        :data="`http://172.31.69.3/document/${documentID}/rendered`"
+        :data="`${apiSource}/document/${documentID}/rendered`"
         @load="iframeState = 1"
       >
         <v-banner color="error" icon="mdi-alert">Error loading document</v-banner>
@@ -79,13 +79,14 @@ export default {
     return {
       iframeState: 0, // 0: loading, 1: loaded
       darkMode: localStorage.getItem('lightMode') === null,
-      search: '',
+      search: localStorage.getItem('searchTerm') || '',
       time: null,
       interval: null,
       searchTimeout: null,
       searchResults: [],
       showSearchError: false,
-      documentInvert: false,
+      documentInvert: true,
+      apiSource: 'http://172.31.69.3',
     }
   },
   computed: {
@@ -111,11 +112,13 @@ export default {
       if (this.iframeState === 0) {
         this.iframeState = 2
       }
-    }, 1e4) // TODO adjust timeout?
+    }, 5e3) // TODO adjust timeout?
   },
   beforeDestroy () {
     // prevent memory leak
     clearInterval(this.interval)
+
+    localStorage.setItem('searchTerm', this.search)
   },
   methods: {
     reload () {
@@ -126,7 +129,7 @@ export default {
       if (this.searchTimeout !== null) {
         clearTimeout(this.searchTimeout)
       }
-      this.$axios.$get(`http://172.31.69.3:80/document/?filter=${this.search}`)
+      this.$axios.$get(`${this.apiSource}/document/?filter=${this.search}`)
         .then((results) => {
           this.showSearchError = false
           this.searchResults = results

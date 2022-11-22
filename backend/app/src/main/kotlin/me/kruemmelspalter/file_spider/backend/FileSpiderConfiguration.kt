@@ -62,7 +62,7 @@ class FileSpiderConfiguration : WebMvcConfigurer, WebServerFactoryCustomizer<Con
     }
 
     override fun addCorsMappings(registry: CorsRegistry) {
-        registry.addMapping("/**").allowedOrigins("*")
+        registry.addMapping("/**").allowedOrigins("*").allowedHeaders("*").allowedMethods("*")
         // TODO proper CORS, this is just for debugging / developing
     }
 }

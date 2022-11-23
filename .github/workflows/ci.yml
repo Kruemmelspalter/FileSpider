@@ -49,7 +49,7 @@ jobs:
         run: cd frontend && make lint
 
       - name: Run tests
-        run: cd frontend && yarn test
+        run: cd frontend && yarn test --passWithNoTests
 
   backend:
     runs-on: ${{ matrix.os }}

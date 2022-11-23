@@ -149,7 +149,7 @@ export default {
       showSearchError: false,
       documentInvert: true,
       apiSource: 'http://172.31.69.3',
-      documentCache: {},
+      documentCache: JSON.parse(localStorage.getItem('documentCache') || '{}'),
       showTagDialog: false,
       tagToAdd: '',
       documentTitle: '',
@@ -181,7 +181,9 @@ export default {
     }, 5e3) // TODO adjust timeout?
 
     this.queryDocument(this.documentID)
-    for (const r of this.searchResults) { this.queryDocument(r) }
+    for (const r of this.searchResults) {
+      this.queryDocument(r)
+    }
   },
   beforeDestroy () {
     // prevent memory leak
@@ -189,6 +191,7 @@ export default {
 
     localStorage.setItem('searchTerm', this.search)
     localStorage.setItem('searchResults', JSON.stringify(this.searchResults))
+    localStorage.setItem('documentCache', JSON.stringify(this.documentCache))
   },
   methods: {
     queryDocument: function (document) {

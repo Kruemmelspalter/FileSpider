@@ -52,6 +52,10 @@ class DocumentService {
         return fsService!!.readLog(id)
     }
 
+    fun setTitle(id: UUID, title: String) {
+        documentRepository!!.setTitle(id, title)
+    }
+
     fun createDocument(
         title: String?,
         renderer: String?,

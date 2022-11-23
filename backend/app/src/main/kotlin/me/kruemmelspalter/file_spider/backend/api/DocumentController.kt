@@ -71,12 +71,13 @@ class DocumentController {
         return documentService!!.getDocumentMeta(documentId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
     }
 
-    data class DocumentChange(val addTags: List<String>?, val removeTags: List<String>?)
+    data class DocumentChange(val addTags: List<String>?, val removeTags: List<String>?, val title: String?)
 
     @PatchMapping("/{id}")
     fun changeDocumentTags(@PathVariable id: UUID, @RequestBody change: DocumentChange) {
         if (change.addTags != null) documentService!!.addTags(id, change.addTags)
         if (change.removeTags != null) documentService!!.removeTags(id, change.removeTags)
+        if (change.title != null) documentService!!.setTitle(id, change.title)
     }
 
     @DeleteMapping("/{id}")

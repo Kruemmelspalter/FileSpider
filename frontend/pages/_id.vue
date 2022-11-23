@@ -17,15 +17,15 @@
         </v-alert>
       </v-form>
       <v-list>
-        <v-list-item v-for="r in searchResults" :key="r.id" :to="r.id" link nuxt>
+        <v-list-item v-for="r in searchResults" :key="documentCache[r]?.id" :to="documentCache[r]?.id" link nuxt>
           <v-list-item-content>
             <v-list-item-subtitle>
-              {{ formatDate(new Date(r.modified)) }}
+              {{ formatDate(documentCache[r]?.modified) }}
             </v-list-item-subtitle>
-            <v-list-item-title>{{ r.title }}</v-list-item-title>
+            <v-list-item-title>{{ documentCache[r]?.title }}</v-list-item-title>
             <v-list-item-subtitle>
               <v-chip-group column>
-                <v-chip v-for="t in r.tags" :key="t" small @click="search = t; commitSearch()">
+                <v-chip v-for="t in documentCache[r]?.tags" :key="t" small @click="search = t; commitSearch()">
                   {{ t }}
                 </v-chip>
               </v-chip-group>
@@ -60,12 +60,16 @@
     </v-system-bar>
 
     <v-main>
-      <v-card style="height:auto; min-height:50vh">
-        <v-card-title>{{ documentData.title }}</v-card-title>
+      <v-card>
+        <v-card-title>
+          <v-form style="width: 100%" @submit.prevent="changeTitle(documentTitle)">
+            <v-text-field v-model="documentTitle" dense full-width />
+          </v-form>
+        </v-card-title>
         <v-card-subtitle>
           <v-chip-group column>
             <v-chip
-              v-for="t in documentData.tags"
+              v-for="t in documentCache[documentID]?.tags"
               :key="t"
               close
               small
@@ -145,9 +149,10 @@ export default {
       showSearchError: false,
       documentInvert: true,
       apiSource: 'http://172.31.69.3',
-      documentData: {},
+      documentCache: {},
       showTagDialog: false,
       tagToAdd: '',
+      documentTitle: '',
     }
   },
   computed: {
@@ -175,13 +180,8 @@ export default {
       }
     }, 5e3) // TODO adjust timeout?
 
-    this.$axios.$get(`${this.apiSource}/document/${this.documentID}`)
-      .then((results) => {
-        this.documentData = results
-      })
-      .catch((_) => {
-        this.documentData = null
-      })
+    this.queryDocument(this.documentID)
+    for (const r of this.searchResults) { this.queryDocument(r) }
   },
   beforeDestroy () {
     // prevent memory leak
@@ -191,21 +191,46 @@ export default {
     localStorage.setItem('searchResults', JSON.stringify(this.searchResults))
   },
   methods: {
+    queryDocument: function (document) {
+      this.$axios.$get(`${this.apiSource}/document/${document}`)
+        .then((results) => {
+          this.addDocumentsToCache([results])
+          if (document === this.documentID) {
+            this.documentTitle = this.documentCache[this.documentID]?.title
+          }
+        })
+    },
+    addDocumentsToCache (documents) {
+      for (const d of documents) {
+        this.documentCache[d.id] = d
+      }
+    },
+    changeTitle (newTitle) {
+      this.$axios.$patch(`${this.apiSource}/document/${this.documentID}`, { title: newTitle })
+        .then(() => {
+          this.queryDocument(this.documentID)
+        })
+    },
     addTag (tag) {
       this.$axios.$patch(`${this.apiSource}/document/${this.documentID}`, { addTags: [tag] })
         .then(() => {
-          this.documentData.tags.push(tag)
+          this.queryDocument(this.documentID)
           this.showTagDialog = false
         })
     },
     removeTag (tag) {
       this.$axios.$patch(`${this.apiSource}/document/${this.documentID}`, { removeTags: [tag] })
         .then(() => {
-          this.documentData.tags = this.documentData.tags.filter(t => t !== tag)
+          this.queryDocument(this.documentID)
         })
     },
     formatDate (date) {
-      return Intl.DateTimeFormat(navigator.language, { dateStyle: 'short', timeStyle: 'short' }).format(date)
+      if (date === undefined) {
+        return ''
+      }
+      return Intl.DateTimeFormat(navigator.language,
+        { dateStyle: 'short', timeStyle: 'short' },
+      ).format(new Date(date))
     },
     reload () {
       this.iframeState = 0
@@ -219,7 +244,8 @@ export default {
       this.$axios.$get(`${this.apiSource}/document/?filter=${this.search}`)
         .then((results) => {
           this.showSearchError = false
-          this.searchResults = results
+          this.searchResults = results.map(r => r.id)
+          this.addDocumentsToCache(results)
         })
         .catch((_) => {
           this.showSearchError = true
@@ -241,7 +267,7 @@ export default {
 #document-content {
   width: 100%;
   height: 100%;
-  min-height: 83vh;
+  min-height: 82vh;
 }
 
 .dark {

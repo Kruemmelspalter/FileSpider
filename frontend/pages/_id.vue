@@ -70,11 +70,27 @@
         </v-card>
       </v-dialog>
       <v-btn icon>
-        <v-icon>mdi-file-document-edit</v-icon>
+        <v-icon>
+          mdi-file-document-edit
+        </v-icon>
       </v-btn>
-      <v-btn icon>
-        <v-icon>mdi-delete</v-icon>
-      </v-btn>
+      <v-bottom-sheet v-model="showDeleteConfirmation">
+        <template #activator="{on, attrs}">
+          <v-btn icon v-bind="attrs" v-on="on">
+            <v-icon>
+              mdi-delete
+            </v-icon>
+          </v-btn>
+        </template>
+        <v-sheet
+          class="text-center py-5"
+        >
+          <v-btn color="error" @click="showDeleteConfirmation = false; deleteDocument()">
+            Really delete document?
+          </v-btn>
+        </v-sheet>
+      </v-bottom-sheet>
+
       <v-btn
         icon
         @click="reload()"
@@ -202,6 +218,7 @@ export default {
         editor: null,
         file: null,
       },
+      showDeleteConfirmation: false,
     }
   },
   computed: {
@@ -337,6 +354,15 @@ export default {
           this.$router.push(newId)
           this.showCreationDialog = false
           this.$refs.creationForm.reset()
+          this.commitSearch()
+        })
+    },
+    deleteDocument () {
+      this.$axios.$delete(`${this.apiSource}/document/${this.documentID}`)
+        .then(() => {
+          this.$router.push('/')
+          delete this.documentCache[this.documentID]
+          this.searchResults = this.searchResults.filter(x => x !== this.documentID)
         })
     },
   },

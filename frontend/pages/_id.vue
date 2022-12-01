@@ -36,6 +36,45 @@
     </v-navigation-drawer>
 
     <v-system-bar class="justify-end" color="primary">
+      <v-btn icon @click="showCreationDialog=true">
+        <v-icon>mdi-file-document-plus</v-icon>
+      </v-btn>
+      <v-dialog
+        v-model="showCreationDialog"
+        width="500"
+      >
+        <v-card>
+          <v-card-title>Add Document</v-card-title>
+          <v-form ref="creationForm" class="px-5 pb-3" @submit.prevent="createDocument()">
+            <v-text-field v-model="creationMeta.title" :rules="[v=>!!v||'Title is required']" autofocus label="Title" />
+            <v-combobox v-model="creationMeta.tags" :items="Array.from(tagCache)" chips label="Tags" multiple />
+            <v-file-input
+              v-model="creationMeta.file"
+              :rules="[v=>!!v||!!creationMeta.mime||'Either file or mime type is required']"
+              chips
+              counter
+              label="File (optional)"
+              show-size
+            />
+            <v-text-field
+              v-model="creationMeta.mime"
+              :rules="[v=>!!v||!!creationMeta.file||'Either file or mime type is required', v=>/^[a-z]+\/[a-z]+(?:\+[a-z]+)?$/.test(v)||'Invalid mime type']"
+              label="MIME Type (auto by default)"
+            />
+            <v-text-field v-model="creationMeta.renderer" label="Renderer (mime specific by default)" />
+            <v-text-field v-model="creationMeta.editor" label="Editor (mime specific by default)" />
+            <v-btn type="submit">
+              Submit
+            </v-btn>
+          </v-form>
+        </v-card>
+      </v-dialog>
+      <v-btn icon>
+        <v-icon>mdi-file-document-edit</v-icon>
+      </v-btn>
+      <v-btn icon>
+        <v-icon>mdi-delete</v-icon>
+      </v-btn>
       <v-btn
         icon
         @click="reload()"
@@ -153,6 +192,16 @@ export default {
       showTagDialog: false,
       tagToAdd: '',
       documentTitle: '',
+      showCreationDialog: false,
+      tagCache: new Set(),
+      creationMeta: {
+        tags: [],
+        title: null,
+        mime: null,
+        renderer: null,
+        editor: null,
+        file: null,
+      },
     }
   },
   computed: {
@@ -200,12 +249,16 @@ export default {
           this.addDocumentsToCache([results])
           if (document === this.documentID) {
             this.documentTitle = this.documentCache[this.documentID]?.title
+            this.creationMeta.tags = this.documentCache[this.documentID]?.tags
           }
         })
     },
     addDocumentsToCache (documents) {
       for (const d of documents) {
         this.documentCache[d.id] = d
+        for (const t of d.tags) {
+          this.tagCache.add(t)
+        }
       }
     },
     changeTitle (newTitle) {
@@ -262,6 +315,30 @@ export default {
       this.searchTimeout = setTimeout(this.commitSearch, 3000)
       this.showSearchError = false
     },
+    createDocument () {
+      if (!this.$refs.creationForm.validate()) {
+        return
+      }
+      const formData = new FormData()
+      formData.append('title', this.creationMeta.title)
+      formData.append('tags', this.creationMeta.tags.join(','))
+      if (this.creationMeta.mime !== null) {
+        formData.append('mimeType', this.creationMeta.mime || this.creationMeta.file?.type)
+      }
+      formData.append('renderer', this.creationMeta.renderer || 'mime')
+      formData.append('editor', this.creationMeta.editor || 'mime')
+      if (this.creationMeta.file !== null) {
+        formData.append('file', this.creationMeta.file)
+      }
+      this.$axios.$post(`${this.apiSource}/document/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+        .then((newId) => {
+          this.$router.push(newId)
+          this.showCreationDialog = false
+          this.$refs.creationForm.reset()
+        })
+    },
   },
 }
 </script>
@@ -270,7 +347,7 @@ export default {
 #document-content {
   width: 100%;
   height: 100%;
-  min-height: 82vh;
+  min-height: 80vh;
 }
 
 .dark {

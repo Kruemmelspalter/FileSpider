@@ -36,13 +36,22 @@ class Renderer {
         private val xournalppRenderer = Renderer().tempDir().command(10) { "xournalpp -p out.pdf ${it.document.id}" }
             .outputFile("application/pdf", "pdf") { "out.pdf" }
 
+        private val mimeSpecificRenderer = Renderer().addStep {
+            it.output = when (it.document.mimeType) {
+                "application/x-tex", "application/x-latex" -> latexRenderer
+                "text/markdown" -> markdownRenderer
+                "application/x-xopp" -> xournalppRenderer
+                else -> plainRenderer
+            }.render(it.document, it.fsService)
+        }
+
         fun getRenderer(rendererName: String): Renderer {
             return when (rendererName) {
                 "plain" -> plainRenderer
                 "markdown", "md" -> markdownRenderer
                 "tex", "latex" -> latexRenderer
                 "xournal", "xournalpp" -> xournalppRenderer
-                else -> plainRenderer
+                else -> mimeSpecificRenderer
             }
         }
     }
@@ -116,11 +125,11 @@ class Renderer {
         }
     }
 
-    fun render(document: Document, fsService: FileSystemService): RenderedDocument {
+    fun render(document: Document, fsService: FileSystemService): RenderedDocument? {
         val meta = RenderMeta(document, fsService.getDirectoryPathFromID(document.id), fsService)
         for (step in renderSteps) step(meta)
         for (step in meta.cleanup) step(meta)
-        return meta.output ?: TODO()
+        return meta.output
     }
 
     data class RenderMeta(

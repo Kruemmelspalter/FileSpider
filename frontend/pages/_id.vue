@@ -4,10 +4,13 @@
       <v-form
         @submit.prevent="commitSearch"
       >
-        <v-text-field
+        <v-combobox
           v-model="search"
+          :items="Array.from(tagCache)"
+          chips
           class="mx-3 mt-5"
           label="Search"
+          multiple
           prepend-icon="mdi-file-search"
           @input="onSearchChange"
           @click:prepend="commitSearch"
@@ -25,7 +28,7 @@
             <v-list-item-title>{{ documentCache[r]?.title }}</v-list-item-title>
             <v-list-item-subtitle>
               <v-chip-group column>
-                <v-chip v-for="t in documentCache[r]?.tags" :key="t" small @click="search = t; commitSearch()">
+                <v-chip v-for="t in documentCache[r]?.tags" :key="t" small @click="search = [t]; commitSearch()">
                   {{ t }}
                 </v-chip>
               </v-chip-group>
@@ -47,7 +50,13 @@
           <v-card-title>Add Document</v-card-title>
           <v-form ref="creationForm" class="px-5 pb-3" @submit.prevent="createDocument()">
             <v-text-field v-model="creationMeta.title" :rules="[v=>!!v||'Title is required']" autofocus label="Title" />
-            <v-combobox v-model="creationMeta.tags" :items="Array.from(tagCache)" chips label="Tags" multiple />
+            <v-combobox
+              v-model="creationMeta.tags"
+              :items="Array.from(tagCache)"
+              chips
+              label="Tags"
+              multiple
+            />
             <v-file-input
               v-model="creationMeta.file"
               :rules="[v=>!!v||!!creationMeta.mime||'Either file or mime type is required']"
@@ -128,7 +137,7 @@
               :key="t"
               close
               small
-              @click="search = t; commitSearch()"
+              @click="search = [t]; commitSearch()"
               @click:close="removeTag(t)"
             >
               {{ t }}
@@ -196,7 +205,7 @@ export default {
     return {
       iframeState: 0, // 0: loading, 1: loaded, 2: error
       darkMode: true,
-      search: localStorage.getItem('searchTerm') || '',
+      search: JSON.parse(localStorage.getItem('searchTerm') || '[]'),
       time: null,
       interval: null,
       searchTimeout: null,
@@ -255,7 +264,7 @@ export default {
     // prevent memory leak
     clearInterval(this.interval)
 
-    localStorage.setItem('searchTerm', this.search)
+    localStorage.setItem('searchTerm', JSON.stringify(this.search))
     localStorage.setItem('searchResults', JSON.stringify(this.searchResults))
     localStorage.setItem('documentCache', JSON.stringify(this.documentCache))
   },
@@ -311,10 +320,13 @@ export default {
       this.$refs.documentContent.data = this.$refs.documentContent.data
     },
     commitSearch () {
+      if (this.search.length === 0) {
+        return
+      }
       if (this.searchTimeout !== null) {
         clearTimeout(this.searchTimeout)
       }
-      this.$axios.$get(`${this.apiSource}/document/?filter=${this.search}`)
+      this.$axios.$get(`${this.apiSource}/document/?filter=${this.search.join(',')}`)
         .then((results) => {
           this.showSearchError = false
           this.searchResults = results.map(r => r.id)
@@ -329,7 +341,7 @@ export default {
       if (this.searchTimeout !== null) {
         clearTimeout(this.searchTimeout)
       }
-      this.searchTimeout = setTimeout(this.commitSearch, 3000)
+      this.searchTimeout = setTimeout(this.commitSearch, 1000)
       this.showSearchError = false
     },
     createDocument () {

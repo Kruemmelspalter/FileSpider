@@ -171,16 +171,16 @@
           </v-chip-group>
         </v-card-subtitle>
         <v-card-text>
-          <object
+          <iframe
             v-show="iframeState === 1"
             id="document-content"
             ref="documentContent"
             :class="{dark: documentInvert}"
-            :data="`${apiSource}/document/${documentID}/rendered`"
+            :src="`${apiSource}/document/${documentID}/rendered`"
             @load="iframeState = 1"
           >
             <v-alert color="error" icon="mdi-alert">Error loading document</v-alert>
-          </object>
+          </iframe>
           <v-alert v-if="iframeState === 0" color="secondary">
             <v-icon class="turning">
               mdi-loading
@@ -386,6 +386,7 @@ export default {
   width: 100%;
   height: 100%;
   min-height: 80vh;
+  border: none;
 }
 
 .dark {

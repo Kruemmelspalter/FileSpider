@@ -5,10 +5,12 @@ import me.kruemmelspalter.file_spider.backend.database.dao.DocumentRepository
 import me.kruemmelspalter.file_spider.backend.database.model.Document
 import me.kruemmelspalter.file_spider.backend.renderer.Renderer
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.core.io.Resource
 import org.springframework.stereotype.Service
 import java.io.InputStream
 import java.sql.Timestamp
 import java.util.UUID
+import javax.servlet.ServletContext
 
 @Service
 class DocumentService {
@@ -95,5 +97,9 @@ class DocumentService {
     fun deleteDocument(id: UUID) {
         documentRepository!!.deleteDocument(id)
         fsService!!.deleteDocument(id)
+    }
+
+    fun getDocumentResource(id: UUID, fileName: String, servletContext: ServletContext): Resource? {
+        return fsService!!.getDocumentResource(id, fileName, servletContext)
     }
 }

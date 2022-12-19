@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.server.ResponseStatusException
 import java.util.UUID
 import java.util.regex.Pattern
+import javax.servlet.http.HttpServletRequest
 
 @RestController
 @RequestMapping("/document")
@@ -104,6 +105,15 @@ class DocumentController {
             .status(HttpStatus.OK)
             .headers(headers)
             .body(InputStreamResource(renderedDocument.stream))
+    }
+
+    @GetMapping("/{id}/rendered/{file}")
+    fun getDocumentResource(
+        @PathVariable("id") documentId: UUID,
+        @PathVariable("file") fileName: String,
+        request: HttpServletRequest
+    ): Resource? {
+        return documentService!!.getDocumentResource(documentId, fileName, request.servletContext)
     }
 
     @GetMapping("/{id}/renderlog")

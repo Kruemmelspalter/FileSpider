@@ -2,8 +2,12 @@ package me.kruemmelspalter.file_spider.backend.services
 
 import com.typesafe.config.ConfigFactory
 import org.slf4j.LoggerFactory
+import org.springframework.core.io.FileSystemResource
+import org.springframework.core.io.Resource
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.util.FileSystemUtils
+import org.springframework.web.server.ResponseStatusException
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileInputStream
@@ -15,6 +19,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.UUID
+import javax.servlet.ServletContext
 
 @Service
 class FileSystemService {
@@ -97,5 +102,16 @@ class FileSystemService {
 
     fun deleteDocument(id: UUID) {
         FileSystemUtils.deleteRecursively(getDirectoryPathFromID(id))
+    }
+
+    fun getDocumentResource(id: UUID, fileName: String, servletContext: ServletContext): Resource? {
+        var resource: Resource? = null
+        if (fileName.isEmpty()) throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+        try {
+            resource = FileSystemResource(Paths.get(getDirectoryPathFromID(id).toString(), fileName))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return resource
     }
 }

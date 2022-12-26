@@ -131,6 +131,15 @@
           </v-form>
         </v-card-title>
         <v-card-subtitle>
+          <span style="user-select: none" @click="copyIdToClipboard" v-text="documentID" />
+          <v-snackbar v-model="showIdCopySnackbar">
+            Copied to clipboard
+            <template #action="{ attrs }">
+              <v-btn text v-bind="attrs" @click="showIdCopySnackbar = false">
+                Close
+              </v-btn>
+            </template>
+          </v-snackbar>
           <v-chip-group column>
             <v-chip
               v-for="t in documentCache[documentID]?.tags"
@@ -228,6 +237,7 @@ export default {
         file: null,
       },
       showDeleteConfirmation: false,
+      showIdCopySnackbar: false,
     }
   },
   computed: {
@@ -269,6 +279,13 @@ export default {
     localStorage.setItem('documentCache', JSON.stringify(this.documentCache))
   },
   methods: {
+    copyIdToClipboard () {
+      navigator.clipboard.writeText(this.documentID)
+      this.showIdCopySnackbar = true
+      setTimeout(() => {
+        this.showIdCopySnackbar = false
+      }, 1e3)
+    },
     queryDocument: function (document) {
       this.$axios.$get(`${this.apiSource}/document/${document}`)
         .then((results) => {

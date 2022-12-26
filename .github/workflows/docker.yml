@@ -1,0 +1,18 @@
+name: Docker CI
+
+on:
+    - push
+
+jobs:
+    push:
+        runs-on: ${{ matrix.os }}
+        strategy:
+            matrix:
+                os: [ubuntu-latest]
+                node: [lts/*]
+                    
+        steps:
+            - uses: actions/checkout@v3
+            - run: echo ${{ secrets.GH_PAT }} | docker login ghcr.io -u ${{ secrets.GH_USERNAME }} --password-stdin
+            - run: cd frontend && yarn install
+            - run: make push

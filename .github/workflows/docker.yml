@@ -34,7 +34,7 @@ jobs:
             
             - run: cd frontend && yarn
             - run: make -C frontend build
-            - run: make app/build/distributions/app.tar
+            - run: make -C backend app/build/distributions/app.tar
             - uses: docker/build-push-action@v2
               with:
                 context: backend

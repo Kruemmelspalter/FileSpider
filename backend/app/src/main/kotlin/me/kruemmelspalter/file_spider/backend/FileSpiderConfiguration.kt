@@ -51,6 +51,7 @@ class FileSpiderConfiguration : WebMvcConfigurer, WebServerFactoryCustomizer<Con
 
     override fun addResourceHandlers(registry: ResourceHandlerRegistry) {
         registry.addResourceHandler("/**").addResourceLocations("classpath:/nuxt/")
+        registry.addResourceHandler("/libs/katex/**").addResourceLocations("classpath:/katex/")
     }
 
     override fun addViewControllers(registry: ViewControllerRegistry) {
@@ -71,6 +72,5 @@ class FileSpiderConfiguration : WebMvcConfigurer, WebServerFactoryCustomizer<Con
 
     override fun addCorsMappings(registry: CorsRegistry) {
         registry.addMapping("/**").allowedOrigins("*").allowedHeaders("*").allowedMethods("*")
-        // TODO proper CORS, this is just for debugging / developing
     }
 }

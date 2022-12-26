@@ -35,12 +35,10 @@ class Renderer {
                 .command(10) {
                     listOf(
                         "pandoc",
-                        "-f",
-                        "markdown",
-                        "-o",
-                        "out.html",
+                        "-f", "markdown",
+                        "-o", "out.html",
                         "-s",
-                        "--katex=https://cdn.jsdelivr.net/npm/katex@0.16.3/dist/",
+                        "--katex=/libs/katex/",
                         "--metadata", "title=${it.document.title}",
                         it.document.id.toString()
                     )

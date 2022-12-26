@@ -13,6 +13,46 @@ jobs:
                     
         steps:
             - uses: actions/checkout@v3
-            - run: echo ${{ secrets.GH_PAT }} | docker login ghcr.io -u ${{ secrets.GH_USERNAME }} --password-stdin
-            - run: cd frontend && yarn install
-            - run: make push
+            - uses: docker/login-action@v2
+              with:
+                    registry: ghcr.io
+                    username: ${{ github.repository_owner }}
+                    password: ${{ secrets.GH_PAT }}
+            - uses: docker/setup-buildx-action@v2
+            - name: Get yarn cache directory path
+              id: yarn-cache-dir-path
+              run: echo "::set-output name=dir::$(yarn cache dir)"
+            
+            - name: Cache node_modules
+              uses: actions/cache@v3
+              id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+              with:
+                path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+                key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+                restore-keys: |
+                    ${{ runner.os }}-yarn-
+            
+            - run: cd frontend && yarn
+            - run: make -C frontend build
+            - run: make -C backend app/build/distributions/app.tar
+            - name: Docker meta
+              id: meta
+              uses: docker/metadata-action@v4
+              with:
+                images: |
+                    ghcr.io/kruemmelspalter/filespider-backend
+                tags: |
+                    type=semver,pattern={{version}}
+                    type=ref,event=branch
+                    type=ref,event=tag
+                    type=sha
+                    type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+                    type=edge
+            - uses: docker/build-push-action@v3
+              with:
+                context: backend
+                tags: ${{ steps.meta.outputs.tags }}
+                labels: ${{ steps.meta.outputs.labels }}
+                cache-from: type=gha
+                cache-to: type=gha,mode=max
+                push: true

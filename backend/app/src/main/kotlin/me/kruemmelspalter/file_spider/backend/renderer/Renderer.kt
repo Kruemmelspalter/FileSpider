@@ -141,10 +141,8 @@ class Renderer {
         filenameProvider: (RenderMeta) -> String = { it.document.id.toString() }
     ): Renderer {
         return command(1) { meta ->
-            val x = listOf("sed", "-i", "-E") + replacements.map { listOf("-e", "s/${it.key}/${it.value}/g") }.flatten() +
+            listOf("sed", "-i", "-E") + replacements.map { listOf("-e", "s/${it.key}/${it.value}/g") }.flatten() +
                 listOf(Paths.get(meta.workingDirectory.toString(), filenameProvider(meta)).toString())
-            println(x)
-            x
         }
     }
 

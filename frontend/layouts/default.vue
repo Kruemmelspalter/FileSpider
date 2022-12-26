@@ -13,8 +13,8 @@ export default {
   name: 'DefaultLayout',
   data () {
     return {
-      title: 'FileSpider'
+      title: 'FileSpider',
     }
-  }
+  },
 }
 </script>

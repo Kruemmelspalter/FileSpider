@@ -14,12 +14,17 @@
   },
   "dependencies": {
     "@nuxtjs/axios": "^5.13.6",
+    "add": "^2.0.6",
     "core-js": "^3.25.3",
     "nuxt": "^2.15.8",
+    "uuid": "^9.0.0",
     "vue": "^2.7.10",
+    "vue-async-computed": "^3.9.0",
+    "vue-pdf": "^4.3.0",
     "vue-server-renderer": "^2.7.10",
     "vue-template-compiler": "^2.7.10",
-    "vuetify": "^2.6.10"
+    "vuetify": "^2.6.10",
+    "yarn": "^1.22.19"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.19.1",

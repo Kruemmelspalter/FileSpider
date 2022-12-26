@@ -4,12 +4,15 @@ import com.typesafe.config.ConfigFactory
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.autoconfigure.web.servlet.DispatcherServletAutoConfiguration
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.boot.runApplication
+import org.springframework.context.annotation.Bean
 import org.springframework.context.event.EventListener
 import org.springframework.core.io.ClassPathResource
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.datasource.init.ScriptUtils
+import org.springframework.web.servlet.DispatcherServlet
 import javax.sql.DataSource
 
 @SpringBootApplication
@@ -17,8 +20,11 @@ class FileSpiderApplication {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val config = ConfigFactory.load()
 
-    @Autowired private val dataSource: DataSource? = null
-    @Autowired private val jdbcTemplate: JdbcTemplate? = null
+    @Autowired
+    private val dataSource: DataSource? = null
+
+    @Autowired
+    private val jdbcTemplate: JdbcTemplate? = null
 
     @EventListener(ApplicationReadyEvent::class)
     fun createTablesIfNonexistent() {
@@ -28,13 +34,23 @@ class FileSpiderApplication {
             if (rs.getInt(1) != 2) {
                 logger.warn("Not all tables 'Document' and 'Tag' exist; creating from init script")
                 try {
-                    ScriptUtils.executeSqlScript(dataSource!!.connection, ClassPathResource(config.getString("app.initFilePath")))
+                    ScriptUtils.executeSqlScript(
+                        dataSource!!.connection,
+                        ClassPathResource(config.getString("app.initFilePath"))
+                    )
                 } catch (e: Exception) {
                     logger.error("could not execute init script")
                     e.printStackTrace()
                 }
             }
         }
+    }
+
+    @Bean(name = [DispatcherServletAutoConfiguration.DEFAULT_DISPATCHER_SERVLET_BEAN_NAME])
+    fun dispatcherServlet(): DispatcherServlet? {
+        val dispatcherServlet = DispatcherServlet()
+        dispatcherServlet.setDispatchOptionsRequest(true)
+        return dispatcherServlet
     }
 }
 

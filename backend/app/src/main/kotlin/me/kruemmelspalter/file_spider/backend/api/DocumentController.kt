@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.server.ResponseStatusException
 import java.util.UUID
 import java.util.regex.Pattern
+import javax.servlet.http.HttpServletRequest
 
 @RestController
 @RequestMapping("/document")
@@ -59,7 +60,7 @@ class DocumentController {
         @RequestParam tags: List<String>?,
         @RequestParam mimeType: String?
     ): String {
-        if (!((file == null) xor (mimeType == null))) throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+        if (mimeType == null && file == null) throw ResponseStatusException(HttpStatus.BAD_REQUEST)
         val uuid = if (mimeType == null)
             documentService!!.createDocument(title, renderer, editor, file?.contentType!!, tags, file.inputStream)
         else documentService!!.createDocument(title, renderer, editor, mimeType, tags, null)
@@ -71,12 +72,13 @@ class DocumentController {
         return documentService!!.getDocumentMeta(documentId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
     }
 
-    data class DocumentChange(val addTags: List<String>?, val removeTags: List<String>?)
+    data class DocumentChange(val addTags: List<String>?, val removeTags: List<String>?, val title: String?)
 
     @PatchMapping("/{id}")
     fun changeDocumentTags(@PathVariable id: UUID, @RequestBody change: DocumentChange) {
         if (change.addTags != null) documentService!!.addTags(id, change.addTags)
         if (change.removeTags != null) documentService!!.removeTags(id, change.removeTags)
+        if (change.title != null) documentService!!.setTitle(id, change.title)
     }
 
     @DeleteMapping("/{id}")
@@ -103,6 +105,15 @@ class DocumentController {
             .status(HttpStatus.OK)
             .headers(headers)
             .body(InputStreamResource(renderedDocument.stream))
+    }
+
+    @GetMapping("/{id}/rendered/{file}")
+    fun getDocumentResource(
+        @PathVariable("id") documentId: UUID,
+        @PathVariable("file") fileName: String,
+        request: HttpServletRequest
+    ): Resource? {
+        return documentService!!.getDocumentResource(documentId, fileName, request.servletContext)
     }
 
     @GetMapping("/{id}/renderlog")

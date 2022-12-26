@@ -26,15 +26,46 @@ class Renderer {
                 it.document.id.toString() + if (it.document.fileExtension != "") "." + it.document.fileExtension else ""
             )
         }
+
+        private val htmlRenderer =
+            Renderer().tempDir().resolveLinks().outputFile("text/html", "html") { it.document.id.toString() }
+
         private val markdownRenderer =
             Renderer().tempDir().replace(mapOf("->" to "$\\rightarrow$", "=>" to "$\\Rightarrow$"))
-                .command(10) { "pandoc -f markdown -o out.html ${it.document.id}" }
-                .outputFile("text/html", "html") { "out.html" }
+                .command(10) {
+                    listOf(
+                        "pandoc",
+                        "-f", "markdown",
+                        "-o", "out.html",
+                        "-s",
+                        "--katex=/libs/katex/",
+                        "--metadata", "title=${it.document.title}",
+                        it.document.id.toString()
+                    )
+                }
+                .resolveLinks { "out.html" }.outputFile("text/html", "html") { "out.html" }
+
         private val latexRenderer = Renderer().tempDir().command(10) {
-            "pdflatex -draftmode -halt-on-error ${it.document.id} && pdflatex -halt-on-error ${it.document.id}"
+            listOf(
+                "bash",
+                "-c",
+                "pdflatex -draftmode -halt-on-error ${it.document.id} && pdflatex -halt-on-error ${it.document.id}"
+            )
         }.outputFile("application/pdf", "pdf") { "${it.document.id}.pdf" }
-        private val xournalppRenderer = Renderer().tempDir().command(10) { "xournalpp -p out.pdf ${it.document.id}" }
-            .outputFile("application/pdf", "pdf") { "${it.document.id}.pdf" }
+
+        private val xournalppRenderer =
+            Renderer().tempDir().command(10) { listOf("xournalpp", "-p", "out.pdf", it.document.id.toString()) }
+                .outputFile("application/pdf", "pdf") { "out.pdf" }
+
+        private val mimeSpecificRenderer = Renderer().useRenderer {
+            when (it.document.mimeType) {
+                "application/x-tex", "application/x-latex" -> latexRenderer
+                "text/markdown" -> markdownRenderer
+                "application/x-xopp" -> xournalppRenderer
+                "text/html" -> htmlRenderer
+                else -> plainRenderer
+            }
+        }
 
         fun getRenderer(rendererName: String): Renderer {
             return when (rendererName) {
@@ -42,7 +73,8 @@ class Renderer {
                 "markdown", "md" -> markdownRenderer
                 "tex", "latex" -> latexRenderer
                 "xournal", "xournalpp" -> xournalppRenderer
-                else -> plainRenderer
+                "html" -> htmlRenderer
+                else -> mimeSpecificRenderer
             }
         }
     }
@@ -81,11 +113,10 @@ class Renderer {
     fun command(
         timeout: Long,
         timeUnit: TimeUnit = TimeUnit.SECONDS,
-        commandProvider: (RenderMeta) -> String
+        commandProvider: (RenderMeta) -> List<String>
     ): Renderer {
         return addStep {
-            val command = commandProvider(it)
-            val process = ProcessBuilder("bash", "-c", command).redirectErrorStream(true)
+            val process = ProcessBuilder(commandProvider(it)).redirectErrorStream(true)
                 .redirectOutput(it.fsService.getLogPathFromID(it.document.id).toFile())
                 .directory(it.workingDirectory.toFile()).start()
             if (!process.waitFor(timeout, timeUnit) || process.exitValue() != 0)
@@ -105,22 +136,44 @@ class Renderer {
         }
     }
 
-    fun replace(replacements: Map<String, String>): Renderer {
-        return command(1) {
-            val stringBuilder = StringBuilder("sed ")
-            for (r in replacements) {
-                stringBuilder.append("-e 's/${r.key}/${r.value}/g' ")
-            }
-            stringBuilder.append(Paths.get(it.workingDirectory.toString(), it.document.id.toString()).toString())
-            stringBuilder.toString()
+    fun replace(
+        replacements: Map<String, String>,
+        filenameProvider: (RenderMeta) -> String = { it.document.id.toString() }
+    ): Renderer {
+        return command(1) { meta ->
+            val x = listOf("sed", "-i", "-E") + replacements.map { listOf("-e", "s/${it.key}/${it.value}/g") }.flatten() +
+                listOf(Paths.get(meta.workingDirectory.toString(), filenameProvider(meta)).toString())
+            println(x)
+            x
         }
     }
 
-    fun render(document: Document, fsService: FileSystemService): RenderedDocument {
-        val meta = RenderMeta(document, fsService.getDirectoryPathFromID(document.id), fsService)
+    fun useRenderer(rendererProvider: (RenderMeta) -> Renderer): Renderer {
+        return addStep {
+            it.output = rendererProvider(it).render(it.document, it.fsService)
+        }
+    }
+
+    fun resolveLinks(filenameProvider: (RenderMeta) -> String = { it.document.id.toString() }): Renderer {
+        return replace(
+            mapOf(
+                "<a href=\"%5E([0-9a-fA-F]{8}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{12})\">(.+)<\\/a>" to "<a href=\"..\\/..\\/\\1\" target=\"_parent\">\\2<\\/a>",
+                "\\\"\\%5E([0-9a-fA-F]{8}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{12})(\\/?.*\\\")"
+                    to "\"..\\/\\1\\/rendered\\2"
+            ),
+            filenameProvider
+        )
+    }
+
+    fun render(document: Document, fsService: FileSystemService): RenderedDocument? {
+
+        return render(RenderMeta(document, fsService.getDirectoryPathFromID(document.id), fsService))
+    }
+
+    fun render(meta: RenderMeta): RenderedDocument? {
         for (step in renderSteps) step(meta)
         for (step in meta.cleanup) step(meta)
-        return meta.output ?: TODO()
+        return meta.output
     }
 
     data class RenderMeta(

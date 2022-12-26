@@ -56,5 +56,6 @@ application {
 }
 
 tasks.processResources {
-    from("../../frontend/dist") { into("static") }
+    from("../../frontend/dist") { into("nuxt") }
+    from("../katex") { into("katex") }
 }

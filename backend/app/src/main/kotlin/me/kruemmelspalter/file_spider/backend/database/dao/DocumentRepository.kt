@@ -65,6 +65,10 @@ class DocumentRepository : DocumentDao {
         }
     }
 
+    override fun setTitle(id: UUID, title: String) {
+        jdbcTemplate!!.update("update Document set title=? where id=?", title, id.toString())
+    }
+
     private fun documentFromResultSet(rs: ResultSet) = Document(
         UUID.fromString(rs.getString(1)),
         rs.getString(2),

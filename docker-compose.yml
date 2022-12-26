@@ -23,7 +23,7 @@ services:
       - ./data/mysql:/var/lib/mysql
   
   filespider:
-    build: ./backend
+    image: kruemmelspalter/filespider-backend
     # restart: unless-stopped
     environment:
       APP_OPTS: -Ddatabase.host=database -Ddatabase.username=user -Ddatabase.password=password -Ddatabase.database=database

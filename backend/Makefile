@@ -10,7 +10,7 @@ app/build/distributions/app.tar: $(shell find app/src/main/kotlin/me/kruemmelspa
 	./gradlew build
 
 docker: app/build/distributions/app.tar
-	docker build . -t filespider-backend
+	docker build . -t kruemmelspalter/filespider-backend:$(shell git rev-parse --short HEAD)
 
 run: docker
 	docker run --rm filespider-backend

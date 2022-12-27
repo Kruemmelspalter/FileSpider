@@ -29,7 +29,7 @@ export default {
       searchResults: [],
       showSearchError: false,
       searchTimeout: null,
-      apiSource: 'http://172.31.69.3',
+      apiSource: localStorage.getItem('apiSource') || '',
     }
   },
   methods: {

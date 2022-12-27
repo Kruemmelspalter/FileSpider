@@ -18,12 +18,12 @@ const editors = {
 function mountWebDAV(host) {
 	execSync(`mkdir -p ${MOUNT_PATH}`)
 	console.log('created directory')
-	execSync(`konsole -e 'sudo mount -t davfs ${API_HOST}/files/ ${MOUNT_PATH}'`)
-	console.log('mounted successfully')
+	execSync(`konsole -e 'sudo mount -t davfs -o uid=${process.getuid()},gid=${process.getgid()} ${API_HOST}/files/ ${MOUNT_PATH}'`)
+	console.log('mounted')
 }
 
 function unmountWebDAV() {
-	return new Promise((res, rej) => exec(`sudo umount ${MOUNT_PATH}`, res))
+	execSync(`konsole -e 'sudo umount ${MOUNT_PATH}'`)
 }
 
 app.post('/document/:docId/edit', async (req, res) => {
@@ -31,7 +31,7 @@ app.post('/document/:docId/edit', async (req, res) => {
 	try {
 		meta = await axios.get(`${API_HOST}/document/${req.params.docId}`)
 	} catch(e) {
-		res.status(500).send(e)
+		res.status(500).send({path: `${API_HOST}/document/${req.params.docId}`, error: e})
 		return
 	}
 	const path = `${MOUNT_PATH}/${req.params.docId}/${req.params.docId}`
@@ -46,12 +46,12 @@ app.post('/document/:docId/edit', async (req, res) => {
 	res.send()
 })
 
-app.use('/', proxy('http://172.31.69.3/'))
+app.use('/', proxy(API_HOST))
 
 var server
 async function startServer() {
 	await mountWebDAV(API_HOST)
-	server = app.listen(PORT, ()=> console.log(`Server listening on http://localhost:${PORT}`))
+	server = app.listen(PORT, () => console.log(`Server listening on http://localhost:${PORT}`))
 }
 
 

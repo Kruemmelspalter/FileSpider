@@ -78,7 +78,7 @@
           </v-form>
         </v-card>
       </v-dialog>
-      <v-btn icon>
+      <v-btn icon @click="launchEditor">
         <v-icon>
           mdi-file-document-edit
         </v-icon>
@@ -188,7 +188,7 @@
             :src="`${apiSource}/document/${documentID}/rendered`"
             @load="iframeState = 1"
           >
-            <v-alert color="error" icon="mdi-alert">Error loading document</v-alert>
+            <v-alert v-if="iframeState === 2" color="error" icon="mdi-alert">Error loading document</v-alert>
           </iframe>
           <v-alert v-if="iframeState === 0" color="secondary">
             <v-icon class="turning">
@@ -221,7 +221,7 @@ export default {
       searchResults: JSON.parse(localStorage.getItem('searchResults') || '[]'),
       showSearchError: false,
       documentInvert: true,
-      apiSource: 'http://172.31.69.3',
+      apiSource: localStorage.getItem('apiSource') || '',
       documentCache: JSON.parse(localStorage.getItem('documentCache') || '{}'),
       showTagDialog: false,
       tagToAdd: '',
@@ -263,7 +263,7 @@ export default {
       if (this.iframeState === 0) {
         this.iframeState = 2
       }
-    }, 5e3) // TODO adjust timeout?
+    }, 5e3)
 
     this.queryDocument(this.documentID)
     for (const r of this.searchResults) {
@@ -279,6 +279,9 @@ export default {
     localStorage.setItem('documentCache', JSON.stringify(this.documentCache))
   },
   methods: {
+    launchEditor () {
+      this.$axios.post(`${this.apiSource}/document/${this.documentID}/edit`)
+    },
     copyIdToClipboard () {
       navigator.clipboard.writeText(this.documentID)
       this.showIdCopySnackbar = true
@@ -334,7 +337,12 @@ export default {
     reload () {
       this.iframeState = 0
       // eslint-disable-next-line no-self-assign
-      this.$refs.documentContent.data = this.$refs.documentContent.data
+      this.$refs.documentContent.src = this.$refs.documentContent.src
+      setTimeout(() => {
+        if (this.iframeState === 0) {
+          this.iframeState = 2
+        }
+      }, 5e3)
     },
     commitSearch () {
       if (this.search.length === 0) {

@@ -1,0 +1,192 @@
+openapi: "3.1.0"
+info:
+    title: "FileSpider"
+    version: "1.0.0"
+
+components:
+    schemas:
+        documentMeta:
+            type: object
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                title:
+                    type: string
+                added:
+                    type: string
+                    format: date
+                editor:
+                    type: string
+                created:
+                    type: string
+                    format: date
+                modified:
+                    type: string
+                    format: date
+                accessed:
+                    type: string
+                    format: date
+                tags:
+                    type: array
+                    items:
+                        type: string
+            
+
+paths:
+    /document:
+        get:
+            description: Search for documents
+            parameters:
+              - name: filter
+                in: query
+                schema:
+                    type: string
+                    description: comma-delimited string of positive and negative (signified by an ! in front) filter tags
+            responses:
+                200:
+                    description: Found documents
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                minItems: 1
+                                items:
+                                    $ref: "#/components/schemas/documentMeta"
+                400:
+                    description: Bad Request, could be a missing positive filter
+
+        post:
+            description: Create document
+            requestBody:
+                multipart/form-data:
+                    schema:
+                        type: object
+                        properties:
+                            file:
+                                type: string
+                                format: binary
+                            title:
+                                type: string
+                            renderer:
+                                type: string
+                            editor:
+                                type: string
+                            tags:
+                                type: array
+                                items:
+                                    type: string
+                            mimeType: string
+            responses:
+                400:
+                    description: Bad Request, could be missing both mime type and file
+                200:
+                    description: Successfully created document
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                                format: uuid
+                                description: ID of the new document
+    /document/{id}:
+        get:
+            description: get document meta
+            parameters:
+              - name: id
+                in: path
+                schema:
+                    type: string
+                    format: uuid
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/documentMeta"
+        patch:
+            description: change meta (tags / title)
+            parameters:
+              - name: id
+                in: path
+                schema:
+                    type: string
+                    format: uuid
+            requestBody:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            addTags:
+                                type: array
+                                items:
+                                    type: string
+                            removeTags:
+                                type: array
+                                items:
+                                    type: string
+                            title:
+                                type: string
+            responses:
+                200: {}
+        delete:
+            description: delete document
+            parameters:
+              - name: id
+                in: path
+                schema:
+                    type: string
+                    format: uuid
+            responses:
+                200: {}
+
+    /document/{id}/rendered:
+        get:
+            description: get rendered document
+            parameters:
+              - name: id
+                in: path
+                schema:
+                    type: string
+                    format: uuid
+              - name: download
+                in: query
+                schema:
+                    type: boolean
+                    default: false
+            responses:
+                200:
+                    description: successfully rendered
+                    content:
+                        */*: {}
+
+    /document/{id}/rendered/{file}:
+        get:
+            description: get raw document asset (e.g. image)
+            parameters:
+              - name: id
+                in: path
+                schema:
+                    type: string
+                    format: uuid
+              - name: file
+                in: path
+                schema:
+                    type: string
+            responses:
+                200:
+                    content:
+                        */*: {}
+
+    /document/{id}/renderlog:
+        get:
+            description: get log of last render
+            responses:
+                200:
+                    content:
+                        text/plain: {}
+
+    /document/{id}/edit:
+        post:
+            description: launch editor for document
+            responses:
+                200: {}

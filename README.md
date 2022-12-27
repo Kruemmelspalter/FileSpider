@@ -4,21 +4,25 @@
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/kruemmelspalter/filespider)
 ![GitHub release (latest SemVer including pre-releases)](https://img.shields.io/github/v/release/kruemmelspalter/filespider?include_prereleases)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/kruemmelspalter/filespider)
+
 FileSpider is a software for organizing and editing documents.
 Documents consist of a main file and optionally different assets like images.
 For example:
 - a markdown document
 - an html document with audio files embedded
 - a LaTeX document split into multiple other tex files and also images
+
 These documents are organized via tags that can be searched for (positive and also negative filters)
 For example:
 - done homework in CS about Java: `school,homework,done,cs,java`
 - homework that's still to do in German: `school,homework,german`
 - a notebook entry in English about literature: `notebook,english,literature,school`
+
 Example searches:
 - `school`: matches all documents with the tag `school` -> All stuff related to school
 - `homework,cs`: matches all documents with tags `cs` and `homework` -> All CS homework
 - `homework,!done`: matches all documents with the tag `homework` and without the tag `done`-> All homework that still needs to be done
+
 The documents are rendered in a specified way, for example:
 - LaTeX files are rendered using pdflatex
 - HTML files and images are just served plainly

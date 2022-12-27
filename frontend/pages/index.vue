@@ -1,8 +1,23 @@
 <template>
-  <v-card>
-    <v-card-title class="ma-2" style="font-size: xxx-large">
-      FileSpider
-    </v-card-title>
+  <v-card class="pa-5">
+    <v-row
+      align="center"
+      justify="center"
+    >
+      <v-card-title class="ma-2" style="font-size: xxx-large">
+        FileSpider
+      </v-card-title>
+    </v-row>
+    <v-row
+      align="center"
+      justify="center"
+    >
+      <v-btn color="primary" @click="showDocumentCreationDialog">
+        Create Document
+      </v-btn>
+    </v-row>
+    <DocumentCreationDialog ref="documentCreationDialog" :api-source="apiSource" />
+
     <v-form>
       <v-combobox
         v-model="search"
@@ -35,6 +50,9 @@ export default {
   methods: {
     redirect (a) {
       this.$router.push(a)
+    },
+    showDocumentCreationDialog () {
+      this.$refs.documentCreationDialog.show()
     },
     commitSearch () {
       if (this.search.length === 0) {

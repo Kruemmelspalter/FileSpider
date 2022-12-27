@@ -11,6 +11,7 @@ For example:
 - a markdown document
 - an html document with audio files embedded
 - a LaTeX document split into multiple other tex files and also images
+- a Xournal++ stylus note
 
 These documents are organized via tags that can be searched for (positive and also negative filters)
 For example:
@@ -50,7 +51,7 @@ const PORT = 8080 // which port to open (for all ports below 1024, root privileg
 ```
 ## Usage
 Assuming the client is started at `http://localhost:8080/`: Open a browser and navigate to `http://localhost:8080/`. 
-- ## TODO Create a new document##
+- Use the `Create Document` button to create a new document
 - If there already are documents, search for a document via entering appropriate tags in the search bar
 
 ## Features that could be added in the future

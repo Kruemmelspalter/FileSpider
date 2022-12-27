@@ -37,11 +37,16 @@ services:
             - database
         command: database:3306
 
+    filespider_started:
+        image: dadarek/wait-for-dependencies
+        depends_on:
+            - filespider
+        command: filespider:80
+
     reverse-proxy:
-        #build: ./reverse-proxy
         image: vizshrc/nginx
         volumes:
             - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
             - ./data/filespider:/data/filespider
-        ports:
-            - 80:80
+        depends_on:
+            - filespider_started

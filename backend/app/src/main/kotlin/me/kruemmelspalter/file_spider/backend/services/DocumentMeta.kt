@@ -8,6 +8,7 @@ data class DocumentMeta(
     val id: UUID,
     val title: String,
     val added: Timestamp,
+    val editor: String,
     val created: Timestamp,
     val modified: Timestamp,
     val accessed: Timestamp,
@@ -19,5 +20,5 @@ data class DocumentMeta(
         modified: Timestamp,
         accessed: Timestamp,
         tags: List<String>
-    ) : this(doc.id, doc.title, doc.added, created, modified, accessed, tags)
+    ) : this(doc.id, doc.title, doc.added, doc.editor, created, modified, accessed, tags)
 }

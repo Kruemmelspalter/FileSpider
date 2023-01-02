@@ -61,9 +61,9 @@ class DocumentController {
         @RequestParam mimeType: String?
     ): String {
         if (mimeType == null && file == null) throw ResponseStatusException(HttpStatus.BAD_REQUEST)
-        val uuid = if (mimeType == null)
-            documentService!!.createDocument(title, renderer, editor, file?.contentType!!, tags, file.inputStream)
-        else documentService!!.createDocument(title, renderer, editor, mimeType, tags, null)
+        val uuid = if (file != null)
+            documentService!!.createDocument(title, renderer, editor, mimeType ?: file.contentType, tags, file.inputStream)
+        else documentService!!.createDocument(title, renderer, editor, mimeType!!, tags, null)
         return uuid.toString()
     }
 

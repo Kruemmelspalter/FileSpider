@@ -25,7 +25,10 @@
         />
         <v-text-field
           v-model="creationMeta.mime"
-          :rules="[v=>!!v||!!creationMeta.file||'Either file or mime type is required', v=>(!!creationMeta.file && v.length === 0)||/^[\-a-z]+\/[\-a-z]+(?:\+[\-a-z]+)?$/.test(v)||'Invalid mime type']"
+          :rules="[
+            v => v !== null || creationMeta.file !== null || 'Either file or mime type is required',
+            v => v === null || v.length <= 0 || /^[-a-z]+\/[-a-z]+(?:\+[-a-z]+)?$/.test(v) || 'Invalid mime type',
+          ]"
           label="MIME Type (auto by default)"
         />
         <v-text-field v-model="creationMeta.renderer" label="Renderer (mime specific by default)" />

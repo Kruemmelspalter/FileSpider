@@ -104,7 +104,6 @@ export default {
         })
     },
     show () {
-      console.log('showing')
       this.visible = true
     },
   },

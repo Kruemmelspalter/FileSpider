@@ -31,18 +31,17 @@ class Renderer {
             Renderer().tempDir().resolveLinks().outputFile("text/html", "html") { it.fileName }
 
         private val markdownRenderer =
-            Renderer().tempDir().replace(mapOf("->" to "$\\\\rightarrow$", "=>" to "$\\\\Rightarrow$"))
-                .command(10) {
-                    listOf(
-                        "pandoc",
-                        "-f", "markdown",
-                        "-o", "out.html",
-                        "-s",
-                        "--katex=/libs/katex/",
-                        "--metadata", "title=${it.document.title}",
-                        it.fileName
-                    )
-                }
+            Renderer().tempDir().command(10) {
+                listOf(
+                    "pandoc",
+                    "-f", "markdown",
+                    "-o", "out.html",
+                    "-s",
+                    "--katex=/libs/katex/",
+                    "--metadata", "title=${it.document.title}",
+                    it.fileName
+                )
+            }
                 .resolveLinks { "out.html" }.outputFile("text/html", "html") { "out.html" }
 
         private val latexRenderer = Renderer().tempDir().command(10) {
@@ -164,7 +163,14 @@ class Renderer {
     }
 
     fun render(document: Document, fsService: FileSystemService): RenderedDocument? {
-        return render(RenderMeta(document, fsService.getDirectoryPathFromID(document.id), fsService, document.id.toString() + if (document.fileExtension != null) "." + document.fileExtension else ""))
+        return render(
+            RenderMeta(
+                document,
+                fsService.getDirectoryPathFromID(document.id),
+                fsService,
+                document.id.toString() + if (document.fileExtension != null) "." + document.fileExtension else ""
+            )
+        )
     }
 
     fun render(meta: RenderMeta): RenderedDocument? {

@@ -10,7 +10,7 @@ const PORT = 8080
 const app = express()
 
 const editors = {
-	mimeSpecific: path => ({explorer: true, command: 'xdg-open', args: [path]}),
+	mime: path => ({explorer: true, command: 'xdg-open', args: [path]}),
 	plain: path => ({explorer: true, command: 'kate', args: [path]}),
 	xournalpp: path => ({explorer: true, command: 'xournalpp', args: [path]}),
 }
@@ -34,13 +34,14 @@ app.post('/document/:docId/edit', async (req, res) => {
 		res.status(500).send({path: `${API_HOST}/document/${req.params.docId}`, error: e})
 		return
 	}
-	const path = `${MOUNT_PATH}/${req.params.docId}/${req.params.docId}`
-	const editor = editors[meta.data.editor](path)
-	if(editor === undefined) {
+	const path = `${MOUNT_PATH}/${req.params.docId}/${req.params.docId}` + meta.fileExtension !== null ? "." + meta.fileExtension : ""
+	const editorProvider = editors[meta.data.editor]
+	if(editorProvider === undefined) {
 		res.status(400).send(`Wrong editor ${meta.data.editor}`)
 		console.log(`Wrong editor ${meta.data.editor}`)
 		return
 	}
+	const editor = editorProvider(path)
 	if(editor.explorer) spawn('dolphin', [`${path}/..`])
 	spawn(editor.command, editor.args)
 	res.send()

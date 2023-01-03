@@ -7,7 +7,6 @@ require('dotenv').config()
 const API_HOST = process.env.API_HOST || 'http://172.31.69.4'
 const MOUNT_PATH = process.env.MOUNT_PATH || (process.env.HOME + '/.filespider')
 const PORT = process.env.PORT || 8080
-
 const app = express()
 
 const editors = {
@@ -35,7 +34,7 @@ app.post('/document/:docId/edit', async (req, res) => {
 		res.status(500).send({path: `${API_HOST}/document/${req.params.docId}`, error: e})
 		return
 	}
-	const path = `${MOUNT_PATH}/${req.params.docId}/${req.params.docId}` + meta.fileExtension !== null ? "." + meta.fileExtension : ""
+	const path = `${MOUNT_PATH}/${req.params.docId}/${req.params.docId}` + (meta.data.fileExtension !== undefined ? "." + meta.data.fileExtension : "")
 	const editorProvider = editors[meta.data.editor]
 	if(editorProvider === undefined) {
 		res.status(400).send(`Wrong editor ${meta.data.editor}`)

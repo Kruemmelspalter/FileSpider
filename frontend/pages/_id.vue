@@ -20,7 +20,13 @@
         </v-alert>
       </v-form>
       <v-list>
-        <v-list-item v-for="r in searchResults" :key="documentCache[r]?.id" :to="documentCache[r]?.id" link nuxt>
+        <v-list-item
+          v-for="r in searchResults"
+          :key="documentCache[r]?.id"
+          :to="documentCache[r]?.id"
+          link
+          nuxt
+        >
           <v-list-item-content>
             <v-list-item-subtitle>
               {{ formatDate(documentCache[r]?.modified) }}
@@ -233,7 +239,9 @@ export default {
     for (const r of this.searchResults) {
       this.queryDocument(r)
     }
-    if (this.search !== []) { this.commitSearch() }
+    if (this.search !== []) {
+      this.commitSearch()
+    }
   },
   beforeDestroy () {
     // prevent memory leak
@@ -321,7 +329,7 @@ export default {
       this.$axios.$get(`${this.apiSource}/document/?filter=${this.search.join(',')}`)
         .then((results) => {
           this.showSearchError = false
-          this.searchResults = results.map(r => r.id)
+          this.searchResults = results.sort((x, y) => new Date(y?.modified) - new Date(x?.modified)).map(r => r.id)
           this.addDocumentsToCache(results)
         })
         .catch((_) => {

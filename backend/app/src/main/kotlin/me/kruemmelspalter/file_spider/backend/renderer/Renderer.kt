@@ -20,9 +20,9 @@ class Renderer {
     companion object {
         private val plainRenderer = Renderer().output {
             RenderedDocument(
-                FileInputStream(it.fsService.getFileFromID(it.document.id)),
+                FileInputStream(it.fsService.getFileFromID(it.document.id, it.document.fileExtension)),
                 it.document.mimeType,
-                it.fsService.getFileAttributesFromID(it.document.id).size(),
+                it.fsService.getFileAttributesFromID(it.document.id, it.document.fileExtension).size(),
                 it.document.id.toString() + if (it.document.fileExtension != "") "." + it.document.fileExtension else ""
             )
         }

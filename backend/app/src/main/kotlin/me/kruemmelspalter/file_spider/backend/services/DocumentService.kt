@@ -29,7 +29,7 @@ class DocumentService {
     }
 
     private fun documentToMeta(document: Document): DocumentMeta {
-        val attributes = fsService!!.getFileAttributesFromID(document.id)
+        val attributes = fsService!!.getFileAttributesFromID(document.id, document.fileExtension)
         return DocumentMeta(
             document,
             Timestamp(attributes.creationTime().toMillis()),
@@ -64,6 +64,7 @@ class DocumentService {
         editor: String?,
         mimeType: String,
         tags: List<String>?,
+        fileExtension: String?,
         content: InputStream?,
     ): UUID {
         val uuid = uuidGenerator.generate()
@@ -75,11 +76,12 @@ class DocumentService {
             editor ?: "text",
             mimeType,
             tags ?: listOf(),
+            fileExtension,
         )
 
-        fsService!!.createDocument(uuid)
+        fsService!!.createDocument(uuid, fileExtension)
         if (content != null) {
-            fsService!!.writeToDocument(uuid, content)
+            fsService!!.writeToDocument(uuid, fileExtension, content)
             content.close()
         }
 

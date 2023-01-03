@@ -85,16 +85,18 @@ class DocumentRepository : DocumentDao {
         renderer: String,
         editor: String,
         mimeType: String,
-        tags: List<String>
+        tags: List<String>,
+        fileExtension: String?,
     ) {
 
         if (jdbcTemplate!!.update(
-                "insert into Document (id, title, renderer, editor, mimeType) values (?,?,?,?,?)",
+                "insert into Document (id, title, renderer, editor, mimeType, fileExtension) values (?,?,?,?,?,?)",
                 uuid.toString(),
                 title,
                 renderer,
                 editor,
-                mimeType
+                mimeType,
+                fileExtension
             ) != 1
         ) throw RuntimeException("document creation did not work / didn't affect one row")
 

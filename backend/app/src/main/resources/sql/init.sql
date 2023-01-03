@@ -5,7 +5,7 @@ create table Document (
     renderer varchar(16) default 'mimeSpecific',
     editor varchar(32) default 'mimeSpecific',
     mimeType varchar(64) not null,
-    fileExtension varchar(10) default '',
+    fileExtension varchar(10),
     primary key (id)
 );
 

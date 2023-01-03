@@ -58,12 +58,13 @@ class DocumentController {
         @RequestParam renderer: String?,
         @RequestParam editor: String?,
         @RequestParam tags: List<String>?,
-        @RequestParam mimeType: String?
+        @RequestParam mimeType: String?,
+        @RequestParam fileExtension: String?,
     ): String {
         if (mimeType == null && file == null) throw ResponseStatusException(HttpStatus.BAD_REQUEST)
         val uuid = if (file != null)
-            documentService!!.createDocument(title, renderer, editor, mimeType ?: file.contentType, tags, file.inputStream)
-        else documentService!!.createDocument(title, renderer, editor, mimeType!!, tags, null)
+            documentService!!.createDocument(title, renderer, editor, mimeType ?: file.contentType, tags, fileExtension, file.inputStream)
+        else documentService!!.createDocument(title, renderer, editor, mimeType!!, tags, fileExtension, null)
         return uuid.toString()
     }
 

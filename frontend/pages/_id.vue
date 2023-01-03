@@ -1,6 +1,6 @@
 <template>
   <v-app dark>
-    <v-navigation-drawer app>
+    <v-navigation-drawer v-model="showSidebar" app>
       <v-form
         @submit.prevent="commitSearch"
       >
@@ -43,63 +43,70 @@
         </v-list-item>
       </v-list>
     </v-navigation-drawer>
-
-    <v-system-bar class="justify-end" color="primary">
-      <v-btn icon @click="showDocumentCreationDialog">
-        <v-icon>mdi-file-document-plus</v-icon>
-      </v-btn>
-      <DocumentCreationDialog
-        ref="documentCreationDialog"
-        :api-source="apiSource"
-        :initial-tags="new Set(documentCache[documentID]?.tags)"
-        :tag-cache="tagCache"
-      />
-      <v-btn icon @click="launchEditor">
-        <v-icon>
-          mdi-file-document-edit
-        </v-icon>
-      </v-btn>
-      <v-bottom-sheet v-model="showDeleteConfirmation">
-        <template #activator="{on, attrs}">
-          <v-btn icon v-bind="attrs" v-on="on">
-            <v-icon>
-              mdi-delete
-            </v-icon>
-          </v-btn>
-        </template>
-        <v-sheet
-          class="text-center py-5"
-        >
-          <v-btn color="error" @click="showDeleteConfirmation = false; deleteDocument()">
-            Really delete document?
-          </v-btn>
-        </v-sheet>
-      </v-bottom-sheet>
-
-      <v-btn
-        icon
-        @click="reload"
-      >
-        <v-icon>mdi-reload</v-icon>
-      </v-btn>
-      <v-btn
-        icon
-        @click="documentInvert = !documentInvert"
-      >
-        <v-icon :class="{turned: documentInvert}">
-          mdi-circle-half-full
-        </v-icon>
-      </v-btn>
-      <v-btn
-        icon
-        @click="darkMode = !darkMode"
-      >
-        <v-icon>mdi-theme-light-dark</v-icon>
-      </v-btn>
-      {{ time }}
-    </v-system-bar>
-
     <v-main>
+      <v-system-bar color="primary">
+        <v-row>
+          <v-col>
+            <v-btn v-if="showSidebar === false" class="hidden-lg-and-up" icon @click="showSidebar = true">
+              <v-icon>mdi-menu</v-icon>
+            </v-btn>
+          </v-col>
+          <v-col class="justify-end" style="display: flex">
+            <v-btn icon @click="showDocumentCreationDialog">
+              <v-icon>mdi-file-document-plus</v-icon>
+            </v-btn>
+            <DocumentCreationDialog
+              ref="documentCreationDialog"
+              :api-source="apiSource"
+              :initial-tags="new Set(documentCache[documentID]?.tags)"
+              :tag-cache="tagCache"
+            />
+            <v-btn icon @click="launchEditor">
+              <v-icon>
+                mdi-file-document-edit
+              </v-icon>
+            </v-btn>
+            <v-bottom-sheet v-model="showDeleteConfirmation">
+              <template #activator="{on, attrs}">
+                <v-btn icon v-bind="attrs" v-on="on">
+                  <v-icon>
+                    mdi-delete
+                  </v-icon>
+                </v-btn>
+              </template>
+              <v-sheet
+                class="text-center py-5"
+              >
+                <v-btn color="error" @click="showDeleteConfirmation = false; deleteDocument()">
+                  Really delete document?
+                </v-btn>
+              </v-sheet>
+            </v-bottom-sheet>
+
+            <v-btn
+              icon
+              @click="reload"
+            >
+              <v-icon>mdi-reload</v-icon>
+            </v-btn>
+            <v-btn
+              icon
+              @click="documentInvert = !documentInvert"
+            >
+              <v-icon :class="{turned: documentInvert}">
+                mdi-circle-half-full
+              </v-icon>
+            </v-btn>
+            <v-btn
+              icon
+              @click="darkMode = !darkMode"
+            >
+              <v-icon>mdi-theme-light-dark</v-icon>
+            </v-btn>
+            <span class="pt-2">{{ time }}</span>
+          </v-col>
+        </v-row>
+      </v-system-bar>
       <v-card>
         <v-card-title>
           <v-form style="width: 100%" @submit.prevent="changeTitle(documentTitle)">
@@ -208,6 +215,7 @@ export default {
       tagCache: new Set(),
       showDeleteConfirmation: false,
       showIdCopySnackbar: false,
+      showSidebar: true,
     }
   },
   computed: {

@@ -164,7 +164,7 @@ class Renderer {
     }
 
     fun render(document: Document, fsService: FileSystemService): RenderedDocument? {
-        return render(RenderMeta(document, fsService.getDirectoryPathFromID(document.id), fsService, document.id.toString() + if (document.fileExtension != "") "." + document.fileExtension else ""))
+        return render(RenderMeta(document, fsService.getDirectoryPathFromID(document.id), fsService, document.id.toString() + if (document.fileExtension != null) "." + document.fileExtension else ""))
     }
 
     fun render(meta: RenderMeta): RenderedDocument? {

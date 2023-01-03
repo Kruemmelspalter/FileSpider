@@ -15,7 +15,8 @@ interface DocumentDao {
         renderer: String,
         editor: String,
         mimeType: String,
-        tags: List<String>
+        tags: List<String>,
+        fileExtension: String?,
     )
 
     fun deleteDocument(id: UUID)

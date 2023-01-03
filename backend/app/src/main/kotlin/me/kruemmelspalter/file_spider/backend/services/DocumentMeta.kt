@@ -13,6 +13,7 @@ data class DocumentMeta(
     val modified: Timestamp,
     val accessed: Timestamp,
     val tags: List<String>,
+    val fileExtension: String?,
 ) {
     constructor(
         doc: Document,
@@ -20,5 +21,5 @@ data class DocumentMeta(
         modified: Timestamp,
         accessed: Timestamp,
         tags: List<String>
-    ) : this(doc.id, doc.title, doc.added, doc.editor, created, modified, accessed, tags)
+    ) : this(doc.id, doc.title, doc.added, doc.editor, created, modified, accessed, tags, doc.fileExtension)
 }

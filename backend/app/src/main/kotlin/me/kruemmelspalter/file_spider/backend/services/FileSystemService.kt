@@ -40,25 +40,25 @@ class FileSystemService {
         if (!Files.isWritable(tmpDirectory)) throw Exception("Temporary Directory isn't writable")
     }
 
-    fun getDocumentPathFromID(id: UUID): Path {
-        return Paths.get(getDirectoryPathFromID(id).toString(), id.toString())
+    fun getDocumentPathFromID(id: UUID, fileExtension: String?): Path {
+        return Paths.get(getDirectoryPathFromID(id).toString(), id.toString() + if (fileExtension != null) ".$fileExtension" else "")
     }
 
     fun getDirectoryPathFromID(id: UUID): Path {
         return Paths.get(documentDirectory.toString(), id.toString()).toAbsolutePath()
     }
 
-    fun getFileFromID(id: UUID): File {
-        return getDocumentPathFromID(id).toFile()
+    fun getFileFromID(id: UUID, fileExtension: String?): File {
+        return getDocumentPathFromID(id, fileExtension).toFile()
     }
 
-    fun getInputStreamFromID(id: UUID): InputStream {
-        return FileInputStream(getFileFromID(id))
+    fun getInputStreamFromID(id: UUID, fileExtension: String?): InputStream {
+        return FileInputStream(getFileFromID(id, fileExtension))
     }
 
-    fun getContentFromID(id: UUID): String {
+    fun getContentFromID(id: UUID, fileExtension: String?): String {
         val resultBuilder = StringBuilder()
-        val br = BufferedReader(FileReader(getFileFromID(id)))
+        val br = BufferedReader(FileReader(getFileFromID(id, fileExtension)))
         br.use {
             var line = br.readLine()
             while (line != null) {
@@ -69,8 +69,8 @@ class FileSystemService {
         return resultBuilder.toString()
     }
 
-    fun getFileAttributesFromID(id: UUID): BasicFileAttributes {
-        return Files.readAttributes(getDocumentPathFromID(id), BasicFileAttributes::class.java)
+    fun getFileAttributesFromID(id: UUID, fileExtension: String?): BasicFileAttributes {
+        return Files.readAttributes(getDocumentPathFromID(id, fileExtension), BasicFileAttributes::class.java)
     }
 
     fun getTemporaryDirectory(): Path {
@@ -87,15 +87,15 @@ class FileSystemService {
         else FileInputStream(file)
     }
 
-    fun createDocument(id: UUID) {
+    fun createDocument(id: UUID, fileExtension: String?) {
         val directory = getDirectoryPathFromID(id).toFile()
         if (!directory.mkdir()) throw Error("could not create document directory")
-        val file = getFileFromID(id)
+        val file = getFileFromID(id, fileExtension)
         if (!file.createNewFile()) throw Error("could not create document file")
     }
 
-    fun writeToDocument(id: UUID, stream: InputStream) {
-        val outStream = FileOutputStream(getFileFromID(id))
+    fun writeToDocument(id: UUID, fileExtension: String?, stream: InputStream) {
+        val outStream = FileOutputStream(getFileFromID(id, fileExtension))
         stream.transferTo(outStream)
         outStream.close()
     }

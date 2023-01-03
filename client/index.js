@@ -2,10 +2,11 @@ const express = require('express')
 const proxy = require('express-http-proxy')
 const { execSync, spawn } = require("child_process")
 const axios = require('axios')
+require('dotenv').config()
 
-const API_HOST = 'http://172.31.69.5'
-const MOUNT_PATH = process.env.HOME + '/.filespider'
-const PORT = 8080
+const API_HOST = process.env.API_HOST || 'http://172.31.69.4'
+const MOUNT_PATH = process.env.MOUNT_PATH || (process.env.HOME + '/.filespider')
+const PORT = process.env.PORT || 8080
 
 const app = express()
 

@@ -33,6 +33,7 @@
         />
         <v-text-field v-model="creationMeta.renderer" label="Renderer (mime specific by default)" />
         <v-text-field v-model="creationMeta.editor" label="Editor (mime specific by default)" />
+        <v-text-field v-model="creationMeta.fileExtension" label="File Extension (auto from file name by default)" />
         <v-btn type="submit">
           Submit
         </v-btn>
@@ -67,6 +68,7 @@ export default {
         renderer: null,
         editor: null,
         file: null,
+        fileExtension: null,
       },
     }
   },
@@ -92,7 +94,14 @@ export default {
       formData.append('editor', this.creationMeta.editor || 'mime')
       if (this.creationMeta.file !== null) {
         formData.append('file', this.creationMeta.file)
+        if (this.creationMeta.fileExtension === null) {
+          formData.append('fileExtension', this.creationMeta.file.name.split('.').at(-1))
+        }
       }
+      if (this.creationMeta.fileExtension !== null) {
+        formData.append('fileExtension', this.creationMeta.fileExtension)
+      }
+
       this.$axios.$post(`${this.apiSource}/document/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
@@ -106,7 +115,8 @@ export default {
     show () {
       this.visible = true
     },
-  },
+  }
+  ,
 }
 </script>
 <style scoped>

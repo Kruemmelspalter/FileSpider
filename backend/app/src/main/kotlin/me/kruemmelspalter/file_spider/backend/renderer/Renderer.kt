@@ -23,15 +23,15 @@ class Renderer {
                 FileInputStream(it.fsService.getFileFromID(it.document.id, it.document.fileExtension)),
                 it.document.mimeType,
                 it.fsService.getFileAttributesFromID(it.document.id, it.document.fileExtension).size(),
-                it.document.id.toString() + if (it.document.fileExtension != "") "." + it.document.fileExtension else ""
+                it.fileName
             )
         }
 
         private val htmlRenderer =
-            Renderer().tempDir().resolveLinks().outputFile("text/html", "html") { it.document.id.toString() }
+            Renderer().tempDir().resolveLinks().outputFile("text/html", "html") { it.fileName }
 
         private val markdownRenderer =
-            Renderer().tempDir().replace(mapOf("->" to "$\\rightarrow$", "=>" to "$\\Rightarrow$"))
+            Renderer().tempDir().replace(mapOf("->" to "$\\\\rightarrow$", "=>" to "$\\\\Rightarrow$"))
                 .command(10) {
                     listOf(
                         "pandoc",
@@ -40,7 +40,7 @@ class Renderer {
                         "-s",
                         "--katex=/libs/katex/",
                         "--metadata", "title=${it.document.title}",
-                        it.document.id.toString()
+                        it.fileName
                     )
                 }
                 .resolveLinks { "out.html" }.outputFile("text/html", "html") { "out.html" }
@@ -54,7 +54,7 @@ class Renderer {
         }.outputFile("application/pdf", "pdf") { "${it.document.id}.pdf" }
 
         private val xournalppRenderer =
-            Renderer().tempDir().command(10) { listOf("xournalpp", "-p", "out.pdf", it.document.id.toString()) }
+            Renderer().tempDir().command(10) { listOf("xournalpp", "-p", "out.pdf", it.fileName) }
                 .outputFile("application/pdf", "pdf") { "out.pdf" }
 
         private val mimeSpecificRenderer = Renderer().useRenderer {
@@ -138,7 +138,7 @@ class Renderer {
 
     fun replace(
         replacements: Map<String, String>,
-        filenameProvider: (RenderMeta) -> String = { it.document.id.toString() }
+        filenameProvider: (RenderMeta) -> String = { it.fileName }
     ): Renderer {
         return command(1) { meta ->
             listOf("sed", "-i", "-E") + replacements.map { listOf("-e", "s/${it.key}/${it.value}/g") }.flatten() +
@@ -152,7 +152,7 @@ class Renderer {
         }
     }
 
-    fun resolveLinks(filenameProvider: (RenderMeta) -> String = { it.document.id.toString() }): Renderer {
+    fun resolveLinks(filenameProvider: (RenderMeta) -> String = { it.fileName }): Renderer {
         return replace(
             mapOf(
                 "<a href=\"%5E([0-9a-fA-F]{8}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{4}\\b-[0-9a-fA-F]{12})\">(.+)<\\/a>" to "<a href=\"..\\/..\\/\\1\" target=\"_parent\">\\2<\\/a>",
@@ -164,8 +164,7 @@ class Renderer {
     }
 
     fun render(document: Document, fsService: FileSystemService): RenderedDocument? {
-
-        return render(RenderMeta(document, fsService.getDirectoryPathFromID(document.id), fsService))
+        return render(RenderMeta(document, fsService.getDirectoryPathFromID(document.id), fsService, document.id.toString() + if (document.fileExtension != "") "." + document.fileExtension else ""))
     }
 
     fun render(meta: RenderMeta): RenderedDocument? {
@@ -178,6 +177,7 @@ class Renderer {
         val document: Document,
         var workingDirectory: Path,
         val fsService: FileSystemService,
+        val fileName: String,
         var output: RenderedDocument? = null,
         val cleanup: MutableList<(RenderMeta) -> Unit> = mutableListOf(),
     )

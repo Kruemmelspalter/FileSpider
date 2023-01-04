@@ -31,17 +31,19 @@ class Renderer {
             Renderer().tempDir().resolveLinks().outputFile("text/html", "html") { it.fileName }
 
         private val markdownRenderer =
-            Renderer().tempDir().command(10) {
-                listOf(
-                    "pandoc",
-                    "-f", "markdown",
-                    "-o", "out.html",
-                    "-s",
-                    "--katex=/libs/katex/",
-                    "--metadata", "title=${it.document.title}",
-                    it.fileName
-                )
-            }
+            Renderer().tempDir()
+                .command(10) {
+                    listOf(
+                        "pandoc",
+                        "-f", "markdown",
+                        "-o", "out.html",
+                        "-s",
+                        "--katex=/libs/katex/",
+                        "--metadata", "title=${it.document.title}",
+                        "-F", "pandoc-mermaid",
+                        it.fileName
+                    )
+                }
                 .resolveLinks { "out.html" }.outputFile("text/html", "html") { "out.html" }
 
         private val latexRenderer = Renderer().tempDir().command(10) {

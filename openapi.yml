@@ -59,24 +59,28 @@ paths:
         post:
             description: Create document
             requestBody:
-                multipart/form-data:
-                    schema:
-                        type: object
-                        properties:
-                            file:
-                                type: string
-                                format: binary
-                            title:
-                                type: string
-                            renderer:
-                                type: string
-                            editor:
-                                type: string
-                            tags:
-                                type: array
-                                items:
+                content:
+                    multipart/form-data:
+                        schema:
+                            type: object
+                            properties:
+                                file:
                                     type: string
-                            mimeType: string
+                                    format: binary
+                                title:
+                                    type: string
+                                renderer:
+                                    type: string
+                                editor:
+                                    type: string
+                                tags:
+                                    type: array
+                                    items:
+                                        type: string
+                                mimeType: 
+                                    type: string
+                                fileExtension:
+                                    type: string
             responses:
                 400:
                     description: Bad Request, could be missing both mime type and file
@@ -112,20 +116,21 @@ paths:
                     type: string
                     format: uuid
             requestBody:
-                application/json:
-                    schema:
-                        type: object
-                        properties:
-                            addTags:
-                                type: array
-                                items:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                addTags:
+                                    type: array
+                                    items:
+                                        type: string
+                                removeTags:
+                                    type: array
+                                    items:
+                                        type: string
+                                title:
                                     type: string
-                            removeTags:
-                                type: array
-                                items:
-                                    type: string
-                            title:
-                                type: string
             responses:
                 200: {}
         delete:

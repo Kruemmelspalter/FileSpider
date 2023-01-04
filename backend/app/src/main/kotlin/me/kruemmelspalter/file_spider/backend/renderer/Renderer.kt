@@ -32,16 +32,28 @@ class Renderer {
 
         private val markdownRenderer =
             Renderer().tempDir()
+                .copy({ it.fileName }, { "tmp0.md" })
+                .command(2) {
+                    listOf(
+                        "mmdc",
+                        "-p", "/opt/filespider/mmdc-puppeteer-config.json",
+                        "-i", "tmp0.md",
+                        "-o", "tmp1.md",
+                        "-e", "png",
+                        "-w", "19200px",
+                    )
+                }
+                .replace(mapOf("!\\[diagram\\]\\((\\.\\/tmp1-[0-9]+\\.png)\\)" to "<img src=\"\\1\" style=\"max-width: 100%\" \\/>")) { "tmp1.md" }
                 .command(10) {
                     listOf(
                         "pandoc",
                         "-f", "markdown",
                         "-o", "out.html",
                         "-s",
-                        "--katex=/libs/katex/",
+                        "--katex=http://localhost:80/libs/katex/",
                         "--metadata", "title=${it.document.title}",
-                        "-F", "pandoc-mermaid",
-                        it.fileName
+                        "--self-contained",
+                        "tmp1.md"
                     )
                 }
                 .resolveLinks { "out.html" }.outputFile("text/html", "html") { "out.html" }
@@ -162,6 +174,11 @@ class Renderer {
             ),
             filenameProvider
         )
+    }
+    fun copy(srcProvider: (RenderMeta) -> String, dstProvider: (RenderMeta) -> String): Renderer {
+        return addStep {
+            Files.copy(Paths.get(it.workingDirectory.toString(), srcProvider(it)), Paths.get(it.workingDirectory.toString(), dstProvider(it)))
+        }
     }
 
     fun render(document: Document, fsService: FileSystemService): RenderedDocument? {

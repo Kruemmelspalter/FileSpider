@@ -69,6 +69,15 @@
                 mdi-file-document-edit
               </v-icon>
             </v-btn>
+            <v-btn
+              v-if="displayingDocument"
+              :href="`${$store.state.apiSource}/document/${documentID}/rendered?download=true`"
+              icon
+            >
+              <v-icon>
+                mdi-download
+              </v-icon>
+            </v-btn>
             <v-bottom-sheet v-model="showDeleteConfirmation">
               <template #activator="{on, attrs}">
                 <v-btn v-if="displayingDocument" icon v-bind="attrs" v-on="on">

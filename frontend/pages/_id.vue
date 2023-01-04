@@ -153,7 +153,7 @@ export default {
       interval: null,
       searchTimeout: null,
       showSearchError: false,
-      documentInvert: true,
+      documentInvert: false,
       showDeleteConfirmation: false,
       showSidebar: true,
     }

@@ -50,21 +50,21 @@
     </v-navigation-drawer>
 
     <v-system-bar class="justify-end" color="primary">
-      <v-btn icon @click="showDocumentCreationDialog">
+      <v-btn v-if="displayingDocument" icon @click="showDocumentCreationDialog">
         <v-icon>mdi-file-document-plus</v-icon>
       </v-btn>
       <DocumentCreationDialog
         ref="documentCreationDialog"
         :initial-tags="$store.state.documentCache[documentID]?.tags"
       />
-      <v-btn icon @click="launchEditor">
+      <v-btn v-if="displayingDocument" icon @click="launchEditor">
         <v-icon>
           mdi-file-document-edit
         </v-icon>
       </v-btn>
       <v-bottom-sheet v-model="showDeleteConfirmation">
         <template #activator="{on, attrs}">
-          <v-btn icon v-bind="attrs" v-on="on">
+          <v-btn v-if="displayingDocument" icon v-bind="attrs" v-on="on">
             <v-icon>
               mdi-delete
             </v-icon>
@@ -80,12 +80,14 @@
       </v-bottom-sheet>
 
       <v-btn
+        v-if="displayingDocument"
         icon
         @click="reload"
       >
         <v-icon>mdi-reload</v-icon>
       </v-btn>
       <v-btn
+        v-if="displayingDocument"
         icon
         @click="documentInvert = !documentInvert"
       >
@@ -104,6 +106,7 @@
 
     <v-main>
       <DocumentDisplay
+        v-if="displayingDocument"
         ref="documentDisplay"
         :document-invert="documentInvert"
         :search="commitSearch"
@@ -121,7 +124,9 @@ export default {
   components: { DocumentDisplay, DocumentCreationDialog },
   layout: 'blank',
   data () {
-    this.$store.dispatch('fetchDocument', this.$route.params.id)
+    if (this.$route.params.id.match(/[\da-fA-F]{8}\b-[\da-fA-F]{4}\b-[\da-fA-F]{4}\b-[\da-fA-F]{4}\b-[\da-fA-F]{12}/)) {
+      this.$store.dispatch('fetchDocument', this.$route.params.id)
+    }
     for (const r of this.$store.state.searchResults) {
       this.$store.dispatch('fetchDocument', r)
     }
@@ -139,6 +144,9 @@ export default {
   computed: {
     documentID () {
       return this.$route.params.id
+    },
+    displayingDocument () {
+      return !!this.documentID.match(/[\da-fA-F]{8}\b-[\da-fA-F]{4}\b-[\da-fA-F]{4}\b-[\da-fA-F]{4}\b-[\da-fA-F]{12}/)
     },
   },
   watch: {
@@ -207,6 +215,9 @@ export default {
     },
     deleteDocument () {
       this.$store.dispatch('deleteDocument', this.documentID)
+        .then(() => {
+          this.$router.push('/index')
+        })
     },
   },
 }

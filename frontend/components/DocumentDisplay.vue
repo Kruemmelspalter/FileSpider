@@ -92,6 +92,10 @@ export default {
     },
   },
   data () {
+    this.$store.dispatch('fetchDocument', this.$route.params.id)
+      .then(() => {
+        this.documentTitle = this.$store.state.documentCache[this.$route.params.id]?.title
+      })
     return {
       showIdCopySnackbar: false,
       showTagDialog: false,

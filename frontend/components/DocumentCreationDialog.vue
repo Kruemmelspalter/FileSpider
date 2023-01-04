@@ -81,6 +81,18 @@ export default {
 \\end{document}`,
           },
         },
+        {
+          text: 'Xournal++',
+          value: {
+            mime: 'application/x-xopp',
+            fileExtension: 'xopp',
+            renderer: 'xournalpp',
+            editor: 'xournalpp',
+            fileContent: Buffer.from('H4sIAN6UtWMA/z2O0WrEIBBFf2WYPgbcNcTdBNT8Rl+tmkRqncWYNvv3q7SU+zBwB+45cj6/Inz' +
+              '7vAdKCjm7IuzFJGciJa8wEc5annTkZCLY7E2hrPD9t+g64KwGYQnR/68MqOXDrB5+giubQjEJ1t+FmPi1zm8+rFtROA6cjeN0vw211' +
+              'fLD2M8105EclOejoneKwSFYio341tuWZWl+z1j/jkrxDi9aXhqsnj9N/QI/qnjL1QAAAA==', 'base64'),
+          },
+        },
       ],
     }
   },

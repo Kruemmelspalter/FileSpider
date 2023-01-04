@@ -62,9 +62,9 @@ class Renderer {
             listOf(
                 "bash",
                 "-c",
-                "pdflatex -draftmode -halt-on-error ${it.document.id} && pdflatex -halt-on-error ${it.document.id}"
+                "pdflatex -draftmode -halt-on-error ${it.fileName} && pdflatex -halt-on-error -jobname=out ${it.fileName}"
             )
-        }.outputFile("application/pdf", "pdf") { "${it.document.id}.pdf" }
+        }.outputFile("application/pdf", "pdf") { "out.pdf" }
 
         private val xournalppRenderer =
             Renderer().tempDir().command(10) { listOf("xournalpp", "-p", "out.pdf", it.fileName) }

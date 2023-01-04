@@ -37,6 +37,7 @@
         <v-btn type="submit">
           Submit
         </v-btn>
+        <v-select v-model="presetChoice" :items="presets" label="Preset" />
       </v-form>
     </v-card>
   </v-dialog>
@@ -62,12 +63,63 @@ export default {
         file: null,
         fileExtension: null,
       },
+      presetChoice: null,
+      presets: [
+        { text: 'Markdown', value: { mime: 'text/markdown', fileExtension: 'md', renderer: 'markdown', editor: 'plain' } },
+        {
+          text: 'LaTeX',
+          value: {
+            mime: 'application/x-tex',
+            fileExtension: 'tex',
+            renderer: 'latex',
+            editor: 'plain',
+            fileContent: `\\documentclass{article}
+\\title{}
+\\author{}
+\\begin{document}
+\\maketitle
+\\end{document}`,
+          },
+        },
+        {
+          text: 'Xournal++',
+          value: {
+            mime: 'application/x-xopp',
+            fileExtension: 'xopp',
+            renderer: 'xournalpp',
+            editor: 'xournalpp',
+            fileContent: Buffer.from('H4sIAN6UtWMA/z2O0WrEIBBFf2WYPgbcNcTdBNT8Rl+tmkRqncWYNvv3q7SU+zBwB+45cj6/Inz' +
+              '7vAdKCjm7IuzFJGciJa8wEc5annTkZCLY7E2hrPD9t+g64KwGYQnR/68MqOXDrB5+giubQjEJ1t+FmPi1zm8+rFtROA6cjeN0vw211' +
+              'fLD2M8105EclOejoneKwSFYio341tuWZWl+z1j/jkrxDi9aXhqsnj9N/QI/qnjL1QAAAA==', 'base64'),
+          },
+        },
+      ],
     }
   },
   watch: {
     initialTags (old, newVal) {
       if (this.creationMeta.tags === Array.from(old) || this.creationMeta.tags === []) {
         this.creationMeta.tags = Array.from(newVal)
+      }
+    },
+    presetChoice (_old, _cur) {
+      if (this.presetChoice === null) {
+        return
+      }
+      if (this.presetChoice.mime) {
+        this.creationMeta.mime = this.presetChoice.mime
+      }
+      if (this.presetChoice.fileExtension) {
+        this.creationMeta.fileExtension = this.presetChoice.fileExtension
+      }
+      if (this.presetChoice.renderer) {
+        this.creationMeta.renderer = this.presetChoice.renderer
+      }
+      if (this.presetChoice.editor) {
+        this.creationMeta.editor = this.presetChoice.editor
+      }
+      if (this.presetChoice.fileContent) {
+        this.creationMeta.file = new Blob([this.presetChoice.fileContent])
       }
     },
   },

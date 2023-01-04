@@ -57,7 +57,7 @@
             </v-btn>
           </v-col>
           <v-col class="justify-end" style="display: flex">
-            <v-btn v-if="displayingDocument" icon @click="showDocumentCreationDialog">
+            <v-btn icon @click="showDocumentCreationDialog">
               <v-icon>mdi-file-document-plus</v-icon>
             </v-btn>
             <DocumentCreationDialog
@@ -153,7 +153,7 @@ export default {
       interval: null,
       searchTimeout: null,
       showSearchError: false,
-      documentInvert: true,
+      documentInvert: false,
       showDeleteConfirmation: false,
       showSidebar: true,
     }
@@ -194,7 +194,7 @@ export default {
   },
   methods: {
     launchEditor () {
-      this.$axios.post(`${this.apiSource}/document/${this.documentID}/edit`)
+      this.$axios.post(`${this.$store.state.apiSource}/document/${this.documentID}/edit`)
     },
     showDocumentCreationDialog () {
       this.$refs.documentCreationDialog.show()

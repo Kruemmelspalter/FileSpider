@@ -103,94 +103,22 @@
     </v-system-bar>
 
     <v-main>
-      <v-card>
-        <v-card-title>
-          <v-form style="width: 100%" @submit.prevent="changeTitle(documentTitle)">
-            <v-text-field v-model="documentTitle" dense full-width />
-          </v-form>
-        </v-card-title>
-        <v-card-subtitle>
-          <span style="user-select: none" @click="copyIdToClipboard" v-text="documentID" />
-          <v-snackbar v-model="showIdCopySnackbar">
-            Copied to clipboard
-            <template #action="{ attrs }">
-              <v-btn text v-bind="attrs" @click="showIdCopySnackbar = false">
-                Close
-              </v-btn>
-            </template>
-          </v-snackbar>
-          <v-chip-group column>
-            <v-chip
-              v-for="t in $store.state.documentCache[documentID]?.tags"
-              :key="t"
-              close
-              small
-              @click="search = [t]; commitSearch()"
-              @click:close="removeTag(t)"
-            >
-              {{ t }}
-            </v-chip>
-            <v-dialog
-              v-model="showTagDialog"
-              width="500"
-            >
-              <template #activator="{ on, attrs }">
-                <v-btn icon small v-bind="attrs" v-on="on">
-                  <v-icon>mdi-plus-circle</v-icon>
-                </v-btn>
-              </template>
-
-              <v-card>
-                <v-card-title>
-                  Add Tag
-                </v-card-title>
-
-                <v-form @submit.prevent="addTag(tagToAdd); tagToAdd=''">
-                  <v-text-field
-                    v-model="tagToAdd"
-                    autofocus
-                    class="mx-5"
-                    label="Tag"
-                    required
-                  />
-                </v-form>
-              </v-card>
-            </v-dialog>
-          </v-chip-group>
-        </v-card-subtitle>
-        <v-card-text>
-          <iframe
-            v-show="iframeState === 1"
-            id="document-content"
-            ref="documentContent"
-            :class="{dark: documentInvert}"
-            :src="`${$store.state.apiSource}/document/${documentID}/rendered`"
-            @load="iframeState = 1"
-          >
-            <v-alert v-if="iframeState === 2" color="error" icon="mdi-alert">Error loading document</v-alert>
-          </iframe>
-          <v-alert v-if="iframeState === 0" color="secondary">
-            <v-icon class="turning">
-              mdi-loading
-            </v-icon>
-            Loading...
-          </v-alert>
-          <v-alert v-if="iframeState===2" color="error" icon="mdi-alert">
-            Error loading document (timeout)
-          </v-alert>
-        </v-card-text>
-      </v-card>
+      <DocumentDisplay
+        ref="documentDisplay"
+        :document-invert="documentInvert"
+        :search="commitSearch"
+      />
     </v-main>
   </v-app>
 </template>
 
-<!--suppress SillyAssignmentJS -->
 <script>
 import DocumentCreationDialog from '@/components/DocumentCreationDialog'
+import DocumentDisplay from '@/components/DocumentDisplay'
 
 export default {
   name: 'DocumentViewer',
-  components: { DocumentCreationDialog },
+  components: { DocumentDisplay, DocumentCreationDialog },
   layout: 'blank',
   data () {
     this.$store.dispatch('fetchDocument', this.$route.params.id)
@@ -198,7 +126,6 @@ export default {
       this.$store.dispatch('fetchDocument', r)
     }
     return {
-      iframeState: 0, // 0: loading, 1: loaded, 2: error
       darkMode: true,
       search: JSON.parse(localStorage.getItem('searchTerm') || '[]'),
       time: null,
@@ -206,11 +133,7 @@ export default {
       searchTimeout: null,
       showSearchError: false,
       documentInvert: true,
-      showTagDialog: false,
-      tagToAdd: '',
-      documentTitle: this.$store.state.documentCache[this.$route.params.id]?.title,
       showDeleteConfirmation: false,
-      showIdCopySnackbar: false,
     }
   },
   computed: {
@@ -232,11 +155,6 @@ export default {
         second: 'numeric',
       }).format()
     }, 1000)
-    setTimeout(() => {
-      if (this.iframeState === 0) {
-        this.iframeState = 2
-      }
-    }, 5e3)
     if (this.search !== []) {
       this.commitSearch()
     }
@@ -256,25 +174,6 @@ export default {
     showDocumentCreationDialog () {
       this.$refs.documentCreationDialog.show()
     },
-    copyIdToClipboard () {
-      navigator.clipboard.writeText(this.documentID)
-      this.showIdCopySnackbar = true
-      setTimeout(() => {
-        this.showIdCopySnackbar = false
-      }, 1e3)
-    },
-    changeTitle (newTitle) {
-      this.$store.dispatch('updateTitle', { id: this.documentID, title: newTitle })
-    },
-    addTag (tag) {
-      this.$store.dispatch('addTag', { id: this.documentID, tag })
-        .then(() => {
-          this.showTagDialog = false
-        })
-    },
-    removeTag (tag) {
-      this.$store.dispatch('removeTag', { id: this.documentID, tag })
-    },
     formatDate (date) {
       if (date === undefined) {
         return ''
@@ -284,16 +183,12 @@ export default {
       ).format(new Date(date))
     },
     reload () {
-      this.iframeState = 0
-      // eslint-disable-next-line no-self-assign
-      this.$refs.documentContent.src = this.$refs.documentContent.src
-      setTimeout(() => {
-        if (this.iframeState === 0) {
-          this.iframeState = 2
-        }
-      }, 5e3)
+      this.$refs.documentDisplay.reload()
     },
-    commitSearch () {
+    commitSearch (x = null) {
+      if (x !== null) {
+        this.search = [x]
+      }
       if (this.search.length === 0) {
         return
       }
@@ -318,20 +213,6 @@ export default {
 </script>
 
 <style scoped>
-#document-content {
-  width: 100%;
-  height: 100%;
-  min-height: 80vh;
-  border: none;
-}
-
-.dark {
-  filter: invert(80%);
-}
-
-.turning {
-  animation: 1s linear infinite rotate;
-}
 
 .turned {
   transform: rotate(180deg);

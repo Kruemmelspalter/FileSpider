@@ -15,7 +15,7 @@ For example:
 
 These documents are organized via tags that can be searched for (positive and also negative filters)
 For example:
-- done homework in CS about Java: `school,homework,done,cs,java`
+- done homework in CS about Java: `school,homework,done,cs,java` (could also be simplified to `done,cs,java` in most cases but the filter before should always be correct)
 - homework that's still to do in German: `school,homework,german`
 - a notebook entry in English about literature: `notebook,english,literature,school`
 
@@ -43,11 +43,10 @@ The client is a small server written in Expres.js which proxies the Backend and 
 ### Server
 An example for setting up FileSpider with Docker Compose can be found in [docker-compose.yml](docker-compose.yml)
 ### Client
-The client can be found in [client/](client/). Just adjust the necessary values:
-```js
-const API_HOST = 'http://172.31.69.5' // where the backend / specifically nginx is hosted
-const MOUNT_PATH = process.env.HOME + '/.filespider' // where to mount the WebDAV share
-const PORT = 8080 // which port to open (for all ports below 1024, root privileges are needed)
+The client can be found in [client/](client/). Just adjust the necessary values in `.env`:
+```dotenv
+API_HOST="http://172.31.69.4"
+PORT=8080
 ```
 ## Usage
 Assuming the client is started at `http://localhost:8080/`: Open a browser and navigate to `http://localhost:8080/`. 
@@ -57,6 +56,5 @@ Assuming the client is started at `http://localhost:8080/`: Open a browser and n
 ## Features that could be added in the future
 - Authentication / Support for multiple users
 - more file types and more rendering / editing
-- document meta (renderer, editor etc.) presets
 - keyboard shortcuts for faster and easier editing
 - CLI / TUI in addition to the web interface

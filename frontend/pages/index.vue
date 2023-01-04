@@ -16,7 +16,7 @@
         Create Document
       </v-btn>
     </v-row>
-    <DocumentCreationDialog ref="documentCreationDialog" :api-source="apiSource" />
+    <DocumentCreationDialog ref="documentCreationDialog" />
 
     <v-form>
       <v-combobox
@@ -29,8 +29,14 @@
         @click:prepend="commitSearch"
       />
     </v-form>
-    <v-card v-for="r in searchResults" :key="r.id" class="ma-4" style="width: 20%" @click="redirect(r.id)">
-      <v-card-title>{{ r.title }}</v-card-title>
+    <v-card
+      v-for="r in $store.state.searchResults"
+      :key="$store.state.documentCache[r]?.id"
+      class="ma-4"
+      style="width: 20%"
+      @click="redirect($store.state.documentCache[r]?.id)"
+    >
+      <v-card-title>{{ $store.state.documentCache[r]?.title }}</v-card-title>
     </v-card>
   </v-card>
 </template>
@@ -41,10 +47,8 @@ export default {
   data () {
     return {
       search: [],
-      searchResults: [],
       showSearchError: false,
       searchTimeout: null,
-      apiSource: localStorage.getItem('apiSource') || '',
     }
   },
   methods: {
@@ -61,15 +65,7 @@ export default {
       if (this.searchTimeout !== null) {
         clearTimeout(this.searchTimeout)
       }
-      this.$axios.$get(`${this.apiSource}/document/?filter=${this.search.join(',')}`)
-        .then((results) => {
-          this.showSearchError = false
-          this.searchResults = results
-        })
-        .catch((_) => {
-          this.showSearchError = true
-          this.searchResults = []
-        })
+      this.$store.dispatch('doSearch', this.search)
     },
     onSearchChange () {
       if (this.searchTimeout !== null) {

@@ -6,7 +6,7 @@
       >
         <v-combobox
           v-model="search"
-          :items="Array.from(tagCache)"
+          :items="$store.state.tags"
           chips
           class="mx-3 mt-5"
           label="Search"
@@ -21,20 +21,25 @@
       </v-form>
       <v-list>
         <v-list-item
-          v-for="r in searchResults"
-          :key="documentCache[r]?.id"
-          :to="documentCache[r]?.id"
+          v-for="r in $store.state.searchResults"
+          :key="$store.state.documentCache[r]?.id"
+          :to="$store.state.documentCache[r]?.id"
           link
           nuxt
         >
           <v-list-item-content>
             <v-list-item-subtitle>
-              {{ formatDate(documentCache[r]?.modified) }}
+              {{ formatDate($store.state.documentCache[r]?.modified) }}
             </v-list-item-subtitle>
-            <v-list-item-title>{{ documentCache[r]?.title }}</v-list-item-title>
+            <v-list-item-title>{{ $store.state.documentCache[r]?.title }}</v-list-item-title>
             <v-list-item-subtitle>
               <v-chip-group column>
-                <v-chip v-for="t in documentCache[r]?.tags" :key="t" small @click="search = [t]; commitSearch()">
+                <v-chip
+                  v-for="t in $store.state.documentCache[r]?.tags"
+                  :key="t"
+                  small
+                  @click="search = [t]; commitSearch()"
+                >
                   {{ t }}
                 </v-chip>
               </v-chip-group>
@@ -52,23 +57,21 @@
             </v-btn>
           </v-col>
           <v-col class="justify-end" style="display: flex">
-            <v-btn icon @click="showDocumentCreationDialog">
+            <v-btn v-if="displayingDocument" icon @click="showDocumentCreationDialog">
               <v-icon>mdi-file-document-plus</v-icon>
             </v-btn>
             <DocumentCreationDialog
               ref="documentCreationDialog"
-              :api-source="apiSource"
-              :initial-tags="new Set(documentCache[documentID]?.tags)"
-              :tag-cache="tagCache"
+              :initial-tags="$store.state.documentCache[documentID]?.tags"
             />
-            <v-btn icon @click="launchEditor">
+            <v-btn v-if="displayingDocument" icon @click="launchEditor">
               <v-icon>
                 mdi-file-document-edit
               </v-icon>
             </v-btn>
             <v-bottom-sheet v-model="showDeleteConfirmation">
               <template #activator="{on, attrs}">
-                <v-btn icon v-bind="attrs" v-on="on">
+                <v-btn v-if="displayingDocument" icon v-bind="attrs" v-on="on">
                   <v-icon>
                     mdi-delete
                   </v-icon>
@@ -84,12 +87,14 @@
             </v-bottom-sheet>
 
             <v-btn
+              v-if="displayingDocument"
               icon
               @click="reload"
             >
               <v-icon>mdi-reload</v-icon>
             </v-btn>
             <v-btn
+              v-if="displayingDocument"
               icon
               @click="documentInvert = !documentInvert"
             >
@@ -107,120 +112,49 @@
           </v-col>
         </v-row>
       </v-system-bar>
-      <v-card>
-        <v-card-title>
-          <v-form style="width: 100%" @submit.prevent="changeTitle(documentTitle)">
-            <v-text-field v-model="documentTitle" dense full-width />
-          </v-form>
-        </v-card-title>
-        <v-card-subtitle>
-          <span style="user-select: none" @click="copyIdToClipboard" v-text="documentID" />
-          <v-snackbar v-model="showIdCopySnackbar">
-            Copied to clipboard
-            <template #action="{ attrs }">
-              <v-btn text v-bind="attrs" @click="showIdCopySnackbar = false">
-                Close
-              </v-btn>
-            </template>
-          </v-snackbar>
-          <v-chip-group column>
-            <v-chip
-              v-for="t in documentCache[documentID]?.tags"
-              :key="t"
-              close
-              small
-              @click="search = [t]; commitSearch()"
-              @click:close="removeTag(t)"
-            >
-              {{ t }}
-            </v-chip>
-            <v-dialog
-              v-model="showTagDialog"
-              width="500"
-            >
-              <template #activator="{ on, attrs }">
-                <v-btn icon small v-bind="attrs" v-on="on">
-                  <v-icon>mdi-plus-circle</v-icon>
-                </v-btn>
-              </template>
-
-              <v-card>
-                <v-card-title>
-                  Add Tag
-                </v-card-title>
-
-                <v-form @submit.prevent="addTag(tagToAdd); tagToAdd=''">
-                  <v-text-field
-                    v-model="tagToAdd"
-                    autofocus
-                    class="mx-5"
-                    label="Tag"
-                    required
-                  />
-                </v-form>
-              </v-card>
-            </v-dialog>
-          </v-chip-group>
-        </v-card-subtitle>
-        <v-card-text>
-          <iframe
-            v-show="iframeState === 1"
-            id="document-content"
-            ref="documentContent"
-            :class="{dark: documentInvert}"
-            :src="`${apiSource}/document/${documentID}/rendered`"
-            @load="iframeState = 1"
-          >
-            <v-alert v-if="iframeState === 2" color="error" icon="mdi-alert">Error loading document</v-alert>
-          </iframe>
-          <v-alert v-if="iframeState === 0" color="secondary">
-            <v-icon class="turning">
-              mdi-loading
-            </v-icon>
-            Loading...
-          </v-alert>
-          <v-alert v-if="iframeState===2" color="error" icon="mdi-alert">
-            Error loading document (timeout)
-          </v-alert>
-        </v-card-text>
-      </v-card>
+      <DocumentDisplay
+        v-if="displayingDocument"
+        ref="documentDisplay"
+        :document-invert="documentInvert"
+        :search="commitSearch"
+      />
     </v-main>
   </v-app>
 </template>
 
-<!--suppress SillyAssignmentJS -->
 <script>
 import DocumentCreationDialog from '@/components/DocumentCreationDialog'
+import DocumentDisplay from '@/components/DocumentDisplay'
 
 export default {
   name: 'DocumentViewer',
-  components: { DocumentCreationDialog },
+  components: { DocumentDisplay, DocumentCreationDialog },
   layout: 'blank',
   data () {
+    if (this.$route.params.id.match(/[\da-fA-F]{8}\b-[\da-fA-F]{4}\b-[\da-fA-F]{4}\b-[\da-fA-F]{4}\b-[\da-fA-F]{12}/)) {
+      this.$store.dispatch('fetchDocument', this.$route.params.id)
+    }
+    for (const r of this.$store.state.searchResults) {
+      this.$store.dispatch('fetchDocument', r)
+    }
     return {
-      iframeState: 0, // 0: loading, 1: loaded, 2: error
       darkMode: true,
       search: JSON.parse(localStorage.getItem('searchTerm') || '[]'),
       time: null,
       interval: null,
       searchTimeout: null,
-      searchResults: JSON.parse(localStorage.getItem('searchResults') || '[]'),
       showSearchError: false,
       documentInvert: true,
-      apiSource: localStorage.getItem('apiSource') || '',
-      documentCache: JSON.parse(localStorage.getItem('documentCache') || '{}'),
-      showTagDialog: false,
-      tagToAdd: '',
-      documentTitle: '',
-      tagCache: new Set(),
       showDeleteConfirmation: false,
-      showIdCopySnackbar: false,
       showSidebar: true,
     }
   },
   computed: {
     documentID () {
       return this.$route.params.id
+    },
+    displayingDocument () {
+      return !!this.documentID.match(/[\da-fA-F]{8}\b-[\da-fA-F]{4}\b-[\da-fA-F]{4}\b-[\da-fA-F]{4}\b-[\da-fA-F]{12}/)
     },
   },
   watch: {
@@ -237,16 +171,6 @@ export default {
         second: 'numeric',
       }).format()
     }, 1000)
-    setTimeout(() => {
-      if (this.iframeState === 0) {
-        this.iframeState = 2
-      }
-    }, 5e3)
-
-    this.queryDocument(this.documentID)
-    for (const r of this.searchResults) {
-      this.queryDocument(r)
-    }
     if (this.search !== []) {
       this.commitSearch()
     }
@@ -256,8 +180,8 @@ export default {
     clearInterval(this.interval)
 
     localStorage.setItem('searchTerm', JSON.stringify(this.search))
-    localStorage.setItem('searchResults', JSON.stringify(this.searchResults))
-    localStorage.setItem('documentCache', JSON.stringify(this.documentCache))
+    localStorage.setItem('searchResults', JSON.stringify(this.$store.state.searchResults))
+    localStorage.setItem('documentCache', JSON.stringify(this.$store.state.documentCache))
   },
   methods: {
     launchEditor () {
@@ -265,49 +189,6 @@ export default {
     },
     showDocumentCreationDialog () {
       this.$refs.documentCreationDialog.show()
-    },
-    copyIdToClipboard () {
-      navigator.clipboard.writeText(this.documentID)
-      this.showIdCopySnackbar = true
-      setTimeout(() => {
-        this.showIdCopySnackbar = false
-      }, 1e3)
-    },
-    queryDocument: function (document) {
-      this.$axios.$get(`${this.apiSource}/document/${document}`)
-        .then((results) => {
-          this.addDocumentsToCache([results])
-          if (document === this.documentID) {
-            this.documentTitle = this.documentCache[this.documentID]?.title
-          }
-        })
-    },
-    addDocumentsToCache (documents) {
-      for (const d of documents) {
-        this.documentCache[d.id] = d
-        for (const t of d.tags) {
-          this.tagCache.add(t)
-        }
-      }
-    },
-    changeTitle (newTitle) {
-      this.$axios.$patch(`${this.apiSource}/document/${this.documentID}`, { title: newTitle })
-        .then(() => {
-          this.queryDocument(this.documentID)
-        })
-    },
-    addTag (tag) {
-      this.$axios.$patch(`${this.apiSource}/document/${this.documentID}`, { addTags: [tag] })
-        .then(() => {
-          this.queryDocument(this.documentID)
-          this.showTagDialog = false
-        })
-    },
-    removeTag (tag) {
-      this.$axios.$patch(`${this.apiSource}/document/${this.documentID}`, { removeTags: [tag] })
-        .then(() => {
-          this.queryDocument(this.documentID)
-        })
     },
     formatDate (date) {
       if (date === undefined) {
@@ -318,32 +199,20 @@ export default {
       ).format(new Date(date))
     },
     reload () {
-      this.iframeState = 0
-      // eslint-disable-next-line no-self-assign
-      this.$refs.documentContent.src = this.$refs.documentContent.src
-      setTimeout(() => {
-        if (this.iframeState === 0) {
-          this.iframeState = 2
-        }
-      }, 5e3)
+      this.$refs.documentDisplay.reload()
     },
-    commitSearch () {
+    commitSearch (x = null) {
+      if (x !== null) {
+        this.search = [x]
+      }
       if (this.search.length === 0) {
         return
       }
       if (this.searchTimeout !== null) {
         clearTimeout(this.searchTimeout)
       }
-      this.$axios.$get(`${this.apiSource}/document/?filter=${this.search.join(',')}`)
-        .then((results) => {
-          this.showSearchError = false
-          this.searchResults = results.sort((x, y) => new Date(y?.modified) - new Date(x?.modified)).map(r => r.id)
-          this.addDocumentsToCache(results)
-        })
-        .catch((_) => {
-          this.showSearchError = true
-          this.searchResults = []
-        })
+
+      this.$store.dispatch('doSearch', this.search)
     },
     onSearchChange () {
       if (this.searchTimeout !== null) {
@@ -353,11 +222,9 @@ export default {
       this.showSearchError = false
     },
     deleteDocument () {
-      this.$axios.$delete(`${this.apiSource}/document/${this.documentID}`)
+      this.$store.dispatch('deleteDocument', this.documentID)
         .then(() => {
-          this.$router.push('/')
-          delete this.documentCache[this.documentID]
-          this.searchResults = this.searchResults.filter(x => x !== this.documentID)
+          this.$router.push('/index')
         })
     },
   },
@@ -365,20 +232,6 @@ export default {
 </script>
 
 <style scoped>
-#document-content {
-  width: 100%;
-  height: 100%;
-  min-height: 80vh;
-  border: none;
-}
-
-.dark {
-  filter: invert(80%);
-}
-
-.turning {
-  animation: 1s linear infinite rotate;
-}
 
 .turned {
   transform: rotate(180deg);

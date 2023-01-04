@@ -59,6 +59,7 @@ class FileSpiderConfiguration : WebMvcConfigurer, WebServerFactoryCustomizer<Con
             "/{id:[0-9a-zA-Z]{8}\\-[0-9a-zA-Z]{4}\\-[0-9a-zA-Z]{4}\\-[0-9a-zA-Z]{4}\\-[0-9a-zA-Z]{12}}"
         ).setViewName("forward:/index.html")
         registry.addViewController("/").setViewName("forward:/index.html")
+        registry.addViewController("/index").setViewName("forward:/index.html")
     }
 
     override fun customize(factory: ConfigurableWebServerFactory) {

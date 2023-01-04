@@ -9,7 +9,7 @@
         <v-text-field v-model="creationMeta.title" :rules="[v=>!!v||'Title is required']" autofocus label="Title" />
         <v-combobox
           v-model="creationMeta.tags"
-          :items="Array.from(tagCache)"
+          :items="$store.state.tags"
           :rules="[v => v.length !== 0||'At least one tag is required']"
           chips
           label="Tags"
@@ -45,24 +45,16 @@
 export default {
   name: 'DocumentCreationDialog',
   props: {
-    tagCache: {
-      type: Set,
-      default: () => new Set(),
-    },
-    apiSource: {
-      type: String,
-      default: '',
-    },
     initialTags: {
-      type: Set,
-      default: () => new Set(),
+      type: Array,
+      default: () => [],
     },
   },
   data () {
     return {
       visible: false,
       creationMeta: {
-        tags: Array.from(this.initialTags),
+        tags: this.initialTags,
         title: null,
         mime: null,
         renderer: null,
@@ -84,32 +76,19 @@ export default {
       if (!this.$refs.creationForm.validate()) {
         return
       }
-      const formData = new FormData()
-      formData.append('title', this.creationMeta.title)
-      formData.append('tags', this.creationMeta.tags.join(','))
-      if (this.creationMeta.mime !== null) {
-        formData.append('mimeType', this.creationMeta.mime || this.creationMeta.file?.type)
-      }
-      formData.append('renderer', this.creationMeta.renderer || 'mime')
-      formData.append('editor', this.creationMeta.editor || 'mime')
-      if (this.creationMeta.file !== null) {
-        formData.append('file', this.creationMeta.file)
-        if (this.creationMeta.fileExtension === null) {
-          formData.append('fileExtension', this.creationMeta.file.name.split('.').at(-1))
-        }
-      }
-      if (this.creationMeta.fileExtension !== null) {
-        formData.append('fileExtension', this.creationMeta.fileExtension)
-      }
-
-      this.$axios.$post(`${this.apiSource}/document/`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      this.$store.dispatch('createDocument', {
+        title: this.creationMeta.title,
+        tags: this.creationMeta.tags,
+        mime: this.creationMeta.mime,
+        renderer: this.creationMeta.renderer || 'mime',
+        editor: this.creationMeta.editor || 'mime',
+        file: this.creationMeta.file,
+        fileExtension: this.creationMeta.fileExtension || this.creationMeta.file?.name?.split('.')?.at(-1),
       })
         .then((newId) => {
           this.$router.push(newId)
           this.visible = false
           this.$refs.creationForm.reset()
-          this.commitSearch()
         })
     },
     show () {

@@ -66,6 +66,21 @@ export default {
       presetChoice: null,
       presets: [
         { text: 'Markdown', value: { mime: 'text/markdown', fileExtension: 'md', renderer: 'markdown', editor: 'plain' } },
+        {
+          text: 'LaTeX',
+          value: {
+            mime: 'application/x-tex',
+            fileExtension: 'tex',
+            renderer: 'latex',
+            editor: 'plain',
+            fileContent: `\\documentclass{article}
+\\title{}
+\\author{}
+\\begin{document}
+\\maketitle
+\\end{document}`,
+          },
+        },
       ],
     }
   },
@@ -90,6 +105,9 @@ export default {
       }
       if (this.presetChoice.editor) {
         this.creationMeta.editor = this.presetChoice.editor
+      }
+      if (this.presetChoice.fileContent) {
+        this.creationMeta.file = new Blob([this.presetChoice.fileContent])
       }
     },
   },

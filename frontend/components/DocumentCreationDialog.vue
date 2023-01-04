@@ -37,6 +37,7 @@
         <v-btn type="submit">
           Submit
         </v-btn>
+        <v-select v-model="presetChoice" :items="presets" label="Preset" />
       </v-form>
     </v-card>
   </v-dialog>
@@ -62,12 +63,33 @@ export default {
         file: null,
         fileExtension: null,
       },
+      presetChoice: null,
+      presets: [
+        { text: 'Markdown', value: { mime: 'text/markdown', fileExtension: 'md', renderer: 'markdown', editor: 'plain' } },
+      ],
     }
   },
   watch: {
     initialTags (old, newVal) {
       if (this.creationMeta.tags === Array.from(old) || this.creationMeta.tags === []) {
         this.creationMeta.tags = Array.from(newVal)
+      }
+    },
+    presetChoice (_old, _cur) {
+      if (this.presetChoice === null) {
+        return
+      }
+      if (this.presetChoice.mime) {
+        this.creationMeta.mime = this.presetChoice.mime
+      }
+      if (this.presetChoice.fileExtension) {
+        this.creationMeta.fileExtension = this.presetChoice.fileExtension
+      }
+      if (this.presetChoice.renderer) {
+        this.creationMeta.renderer = this.presetChoice.renderer
+      }
+      if (this.presetChoice.editor) {
+        this.creationMeta.editor = this.presetChoice.editor
       }
     },
   },

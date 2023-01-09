@@ -6,7 +6,7 @@
       >
         <v-combobox
           v-model="search"
-          :items="$store.state.tags"
+          :items="$store.getters.tags"
           chips
           class="mx-3 mt-5"
           label="Search"

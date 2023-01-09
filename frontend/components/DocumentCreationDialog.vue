@@ -9,7 +9,7 @@
         <v-text-field v-model="creationMeta.title" :rules="[v=>!!v||'Title is required']" autofocus label="Title" />
         <v-combobox
           v-model="creationMeta.tags"
-          :items="$store.state.tags"
+          :items="$store.getters.tags"
           :rules="[v => v.length !== 0||'At least one tag is required']"
           chips
           label="Tags"

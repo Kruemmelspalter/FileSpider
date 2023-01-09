@@ -135,7 +135,7 @@ export default {
         renderer: this.creationMeta.renderer || 'mime',
         editor: this.creationMeta.editor || 'mime',
         file: this.creationMeta.file,
-        fileExtension: this.creationMeta.fileExtension || this.creationMeta.file?.name?.split('.')?.at(-1),
+        fileExtension: this.creationMeta.fileExtension || this.creationMeta.file?.name?.split('.')?.at(-1) || null,
       })
         .then((newId) => {
           this.$router.push(newId)

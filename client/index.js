@@ -47,7 +47,7 @@ app.post('/document/:docId/edit', async (req, res) => {
 	res.send()
 })
 
-app.use('/', proxy(API_HOST))
+app.use('/', proxy(API_HOST, { limit: '1024mb' }))
 
 var server
 async function startServer() {

@@ -1,7 +1,7 @@
 <template>
   <v-card>
     <v-card-title>
-      <v-form style="width: 100%" @submit.prevent="changeTitle">
+      <v-form style="width: 100%" @submit.prevent="changeTitle(documentTitle)">
         <v-text-field v-model="documentTitle" dense full-width />
       </v-form>
     </v-card-title>
@@ -22,7 +22,7 @@
           close
           small
           @click="search(t)"
-          @click:close="removeTag"
+          @click:close="removeTag(t)"
         >
           {{ t }}
         </v-chip>
@@ -41,7 +41,7 @@
               Add Tag
             </v-card-title>
 
-            <v-form @submit.prevent="addTag; tagToAdd=''">
+            <v-form @submit.prevent="addTag(tagToAdd); tagToAdd=''">
               <v-text-field
                 v-model="tagToAdd"
                 autofocus

@@ -38,7 +38,7 @@ class DocumentController {
     @GetMapping("/")
     fun searchDocuments(@RequestParam("filter") filterString: String): List<DocumentMeta> {
         if (!Pattern.matches(
-                "^!?\\w+(?:,!?\\w+)*\$",
+                "^!?\\p{L}+(?:,!?\\p{L}+)*\$",
                 filterString
             )
         ) throw ResponseStatusException(HttpStatus.BAD_REQUEST)

@@ -114,7 +114,7 @@ export default {
       if (this.iframeState === 0) {
         this.iframeState = 2
       }
-    }, 5e3)
+    }, 20e3)
   },
   methods: {
     copyIdToClipboard () {

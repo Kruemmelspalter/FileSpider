@@ -93,6 +93,8 @@ export default {
               'fLD2M8105EclOejoneKwSFYio341tuWZWl+z1j/jkrxDi9aXhqsnj9N/QI/qnjL1QAAAA==', 'base64'),
           },
         },
+        { text: 'ePub', value: { mime: 'application/zip+epub', fileExtension: 'epub', renderer: 'ebook' } },
+        { text: 'eBook', value: { renderer: 'ebook' } },
       ],
     }
   },

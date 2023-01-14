@@ -70,12 +70,19 @@ class Renderer {
             Renderer().tempDir().command(10) { listOf("xournalpp", "-p", "out.pdf", it.fileName) }
                 .outputFile("application/pdf", "pdf") { "out.pdf" }
 
+        private val ebookRenderer = Renderer().tempDir()
+            .command(15, mapOf("QTWEBENGINE_CHROMIUM_FLAGS" to "--no-sandbox")) {
+                listOf("ebook-convert", it.fileName, "out.pdf")
+            }
+            .outputFile("application/pdf", "pdf") { "out.pdf" }
+
         private val mimeSpecificRenderer = Renderer().useRenderer {
             when (it.document.mimeType) {
                 "application/x-tex", "application/x-latex" -> latexRenderer
                 "text/markdown" -> markdownRenderer
                 "application/x-xopp" -> xournalppRenderer
                 "text/html" -> htmlRenderer
+                "application/zip+epub" -> ebookRenderer
                 else -> plainRenderer
             }
         }
@@ -87,6 +94,7 @@ class Renderer {
                 "tex", "latex" -> latexRenderer
                 "xournal", "xournalpp" -> xournalppRenderer
                 "html" -> htmlRenderer
+                "renderer" -> ebookRenderer
                 else -> mimeSpecificRenderer
             }
         }
@@ -125,13 +133,16 @@ class Renderer {
 
     fun command(
         timeout: Long,
+        environment: Map<String, String> = mapOf(),
         timeUnit: TimeUnit = TimeUnit.SECONDS,
         commandProvider: (RenderMeta) -> List<String>
     ): Renderer {
         return addStep {
-            val process = ProcessBuilder(commandProvider(it)).redirectErrorStream(true)
+            val pb = ProcessBuilder(commandProvider(it)).redirectErrorStream(true)
                 .redirectOutput(it.fsService.getLogPathFromID(it.document.id).toFile())
-                .directory(it.workingDirectory.toFile()).start()
+                .directory(it.workingDirectory.toFile())
+            environment.toMap(pb.environment())
+            val process = pb.start()
             if (!process.waitFor(timeout, timeUnit) || process.exitValue() != 0)
                 throw RenderingException(String(it.fsService.readLog(it.document.id)?.readAllBytes() ?: byteArrayOf()))
         }
@@ -175,9 +186,13 @@ class Renderer {
             filenameProvider
         )
     }
+
     fun copy(srcProvider: (RenderMeta) -> String, dstProvider: (RenderMeta) -> String): Renderer {
         return addStep {
-            Files.copy(Paths.get(it.workingDirectory.toString(), srcProvider(it)), Paths.get(it.workingDirectory.toString(), dstProvider(it)))
+            Files.copy(
+                Paths.get(it.workingDirectory.toString(), srcProvider(it)),
+                Paths.get(it.workingDirectory.toString(), dstProvider(it))
+            )
         }
     }
 

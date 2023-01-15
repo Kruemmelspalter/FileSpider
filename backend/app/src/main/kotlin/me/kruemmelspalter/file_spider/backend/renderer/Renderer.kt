@@ -67,7 +67,14 @@ class Renderer {
         }.outputFile("application/pdf", "pdf") { "out.pdf" }
 
         private val xournalppRenderer =
-            Renderer().tempDir().command(10) { listOf("xournalpp", "-p", "out.pdf", it.fileName) }
+            Renderer().tempDir().command(2) {
+                listOf(
+                    "sh",
+                    "-c",
+                    "gunzip -c -S .${it.document.fileExtension} ${it.fileName} |sed -r -e 's/filename=\".*\\/${it.document.id}\\/(.*)\" /filename=\"\\1\" /g'|gzip>tmp.xopp"
+                )
+            }
+                .command(10) { listOf("xournalpp", "-p", "out.pdf", "tmp.xopp") }
                 .outputFile("application/pdf", "pdf") { "out.pdf" }
 
         private val mimeSpecificRenderer = Renderer().useRenderer {
@@ -177,7 +184,10 @@ class Renderer {
     }
     fun copy(srcProvider: (RenderMeta) -> String, dstProvider: (RenderMeta) -> String): Renderer {
         return addStep {
-            Files.copy(Paths.get(it.workingDirectory.toString(), srcProvider(it)), Paths.get(it.workingDirectory.toString(), dstProvider(it)))
+            Files.copy(
+                Paths.get(it.workingDirectory.toString(), srcProvider(it)),
+                Paths.get(it.workingDirectory.toString(), dstProvider(it))
+            )
         }
     }
 

@@ -11,14 +11,14 @@ lint_fix:
 	make -C backend lint_fix
 
 build:
-	make -C frontend build
 	make -C backend build
 
 docker: build
 	make -C backend docker
+	make -C frontend docker
 
 run: docker
-	docker-compose up --force-recreate filespider 
+	docker-compose up --force-recreate
 
 push: docker
 	docker push ghcr.io/kruemmelspalter/filespider-backend:$(commitHash)

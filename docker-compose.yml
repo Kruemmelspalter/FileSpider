@@ -21,7 +21,7 @@ services:
         volumes:
             - ./data/mysql:/var/lib/mysql
   
-    filespider:
+    backend:
         image: ghcr.io/kruemmelspalter/filespider-backend:${FILESPIDER_TAG}
         environment:
             APP_OPTS: -Ddatabase.host=database -Ddatabase.username=user -Ddatabase.password=password -Ddatabase.database=database
@@ -31,17 +31,26 @@ services:
             database_started:
                 condition: service_completed_successfully
 
+    frontend:
+        image: ghcr.io/kruemmelspalter/filespider-frontend:${FILESPIDER_TAG}
+
     database_started:
         image: dadarek/wait-for-dependencies
         depends_on:
             - database
         command: database:3306
 
-    filespider_started:
+    backend_started:
         image: dadarek/wait-for-dependencies
         depends_on:
-            - filespider
-        command: filespider:80
+            - backend
+        command: backend:80
+
+    frontend_started:
+            image: dadarek/wait-for-dependencies
+            depends_on:
+                - frontend
+            command: frontend:80
 
     reverse-proxy:
         image: vizshrc/nginx
@@ -49,5 +58,7 @@ services:
             - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
             - ./data/filespider:/data/filespider
         depends_on:
-            filespider_started:
+            backend_started:
+                condition: service_completed_successfully
+            frontend_started:
                 condition: service_completed_successfully

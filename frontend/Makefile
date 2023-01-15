@@ -10,3 +10,6 @@ lint: $(sources)
 
 lint_fix: $(sources)
 	yarn lint --fix
+
+docker:
+	docker build . -t ghcr.io/kruemmelspalter/filespider-frontend:$(shell git rev-parse --short HEAD)

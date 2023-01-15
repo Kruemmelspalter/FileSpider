@@ -161,7 +161,7 @@ class Renderer {
 
     fun useRenderer(rendererProvider: (RenderMeta) -> Renderer): Renderer {
         return addStep {
-            it.output = rendererProvider(it).render(it.document, it.fsService)
+            it.output = rendererProvider(it).render(it.document, it.fsService, it.cache)
         }
     }
 
@@ -175,27 +175,34 @@ class Renderer {
             filenameProvider
         )
     }
+
     fun copy(srcProvider: (RenderMeta) -> String, dstProvider: (RenderMeta) -> String): Renderer {
         return addStep {
-            Files.copy(Paths.get(it.workingDirectory.toString(), srcProvider(it)), Paths.get(it.workingDirectory.toString(), dstProvider(it)))
+            Files.copy(
+                Paths.get(it.workingDirectory.toString(), srcProvider(it)),
+                Paths.get(it.workingDirectory.toString(), dstProvider(it))
+            )
         }
     }
 
-    fun render(document: Document, fsService: FileSystemService): RenderedDocument? {
+    fun render(document: Document, fsService: FileSystemService, cache: RenderCache): RenderedDocument? {
         return render(
             RenderMeta(
                 document,
                 fsService.getDirectoryPathFromID(document.id),
                 fsService,
-                document.id.toString() + if (document.fileExtension != null) "." + document.fileExtension else ""
-            )
+                document.id.toString() + if (document.fileExtension != null) "." + document.fileExtension else "",
+                cache,
+            ),
+            cache
         )
     }
 
-    fun render(meta: RenderMeta): RenderedDocument? {
+    fun render(meta: RenderMeta, cache: RenderCache): RenderedDocument? {
+        if (cache.isCacheValid(meta.document.id)) return cache.getCachedRender(meta.document.id)
         for (step in renderSteps) step(meta)
         for (step in meta.cleanup) step(meta)
-        return meta.output
+        return cache.cacheRender(meta.document.id, meta.output!!)
     }
 
     data class RenderMeta(
@@ -203,6 +210,7 @@ class Renderer {
         var workingDirectory: Path,
         val fsService: FileSystemService,
         val fileName: String,
+        val cache: RenderCache,
         var output: RenderedDocument? = null,
         val cleanup: MutableList<(RenderMeta) -> Unit> = mutableListOf(),
     )

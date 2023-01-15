@@ -3,6 +3,7 @@ package me.kruemmelspalter.file_spider.backend.services
 import com.fasterxml.uuid.Generators
 import me.kruemmelspalter.file_spider.backend.database.dao.DocumentRepository
 import me.kruemmelspalter.file_spider.backend.database.model.Document
+import me.kruemmelspalter.file_spider.backend.renderer.RenderCache
 import me.kruemmelspalter.file_spider.backend.renderer.Renderer
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.io.Resource
@@ -22,6 +23,9 @@ class DocumentService {
 
     @Autowired
     val fsService: FileSystemService? = null
+
+    @Autowired
+    private lateinit var renderCache: RenderCache
 
     fun getDocumentMeta(id: UUID): DocumentMeta? {
         val document = documentRepository!!.getDocument(id)
@@ -45,7 +49,7 @@ class DocumentService {
 
     fun renderDocument(id: UUID): RenderedDocument? {
         val document = documentRepository!!.getDocument(id)
-        return if (document == null) null else Renderer.getRenderer(document.renderer).render(document, fsService!!)
+        return if (document == null) null else Renderer.getRenderer(document.renderer).render(document, fsService!!, renderCache)
     }
 
     fun readDocumentLog(id: UUID): InputStream? {

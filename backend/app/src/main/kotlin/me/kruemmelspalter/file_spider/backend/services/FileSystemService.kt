@@ -38,10 +38,18 @@ class FileSystemService {
         if (!Files.exists(tmpDirectory)) throw Exception("Temporary Directory doesn't exist")
         if (!Files.isReadable(tmpDirectory)) throw Exception("Temporary Directory isn't readable")
         if (!Files.isWritable(tmpDirectory)) throw Exception("Temporary Directory isn't writable")
+
+        if (!Files.exists(getCacheDirectory())) {
+            logger.warn("cache directory doesn't exist, creating")
+            Files.createDirectories(getCacheDirectory())
+        }
     }
 
     fun getDocumentPathFromID(id: UUID, fileExtension: String?): Path {
-        return Paths.get(getDirectoryPathFromID(id).toString(), id.toString() + if (fileExtension != null) ".$fileExtension" else "")
+        return Paths.get(
+            getDirectoryPathFromID(id).toString(),
+            id.toString() + if (fileExtension != null) ".$fileExtension" else ""
+        )
     }
 
     fun getDirectoryPathFromID(id: UUID): Path {
@@ -113,5 +121,9 @@ class FileSystemService {
             e.printStackTrace()
         }
         return resource
+    }
+
+    final fun getCacheDirectory(): Path {
+        return Paths.get(documentDirectory.toString(), "cache")
     }
 }

@@ -41,14 +41,17 @@
               Add Tag
             </v-card-title>
 
-            <v-form @submit.prevent="addTag(tagToAdd); tagToAdd=''">
-              <v-text-field
+            <v-form class="pa-5" @submit.prevent="addTag(tagToAdd); tagToAdd=''">
+              <v-combobox
                 v-model="tagToAdd"
+                :items="$store.getters.tags"
                 autofocus
-                class="mx-5"
                 label="Tag"
                 required
               />
+              <v-btn type="submit">
+                Submit
+              </v-btn>
             </v-form>
           </v-card>
         </v-dialog>

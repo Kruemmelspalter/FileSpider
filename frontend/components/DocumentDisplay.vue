@@ -156,7 +156,7 @@ export default {
 #document-content {
   width: 100%;
   height: 100%;
-  min-height: 80vh;
+  min-height: 78.3vh;
   border: none;
 }
 

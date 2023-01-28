@@ -17,7 +17,7 @@ class Renderer {
     private val renderSteps: MutableList<(RenderMeta) -> Unit> = mutableListOf()
 
     companion object {
-        private val plainRenderer = Renderer().output {
+        internal val plainRenderer = Renderer().output {
             RenderedDocument(
                 FileInputStream(it.fsService.getFileFromID(it.document.id, it.document.fileExtension)),
                 it.document.mimeType,
@@ -26,10 +26,10 @@ class Renderer {
             )
         }
 
-        private val htmlRenderer =
+        internal val htmlRenderer =
             Renderer().tempDir().resolveLinks().outputFile("text/html", "html") { it.fileName }
 
-        private val markdownRenderer =
+        internal val markdownRenderer =
             Renderer().tempDir()
                 .copy({ it.fileName }, { "tmp0.md" })
                 .command(2) {
@@ -57,7 +57,7 @@ class Renderer {
                 }
                 .resolveLinks { "out.html" }.outputFile("text/html", "html") { "out.html" }
 
-        private val latexRenderer = Renderer().tempDir().command(10) {
+        internal val latexRenderer = Renderer().tempDir().command(10) {
             listOf(
                 "bash",
                 "-c",
@@ -65,7 +65,7 @@ class Renderer {
             )
         }.outputFile("application/pdf", "pdf") { "out.pdf" }
 
-        private val xournalppRenderer =
+        internal val xournalppRenderer =
             Renderer().tempDir().command(2) {
                 listOf(
                     "sh",
@@ -76,34 +76,11 @@ class Renderer {
                 .command(10) { listOf("xournalpp", "-p", "out.pdf", "tmp.xopp") }
                 .outputFile("application/pdf", "pdf") { "out.pdf" }
 
-        private val ebookRenderer = Renderer().tempDir()
+        internal val ebookRenderer = Renderer().tempDir()
             .command(15, mapOf("QTWEBENGINE_CHROMIUM_FLAGS" to "--no-sandbox")) {
                 listOf("ebook-convert", it.fileName, "out.pdf")
             }
             .outputFile("application/pdf", "pdf") { "out.pdf" }
-
-        private val mimeSpecificRenderer = Renderer().useRenderer {
-            when (it.document.mimeType) {
-                "application/x-tex", "application/x-latex" -> latexRenderer
-                "text/markdown" -> markdownRenderer
-                "application/x-xopp" -> xournalppRenderer
-                "text/html" -> htmlRenderer
-                "application/zip+epub" -> ebookRenderer
-                else -> plainRenderer
-            }
-        }
-
-        fun getRenderer(rendererName: String): Renderer {
-            return when (rendererName) {
-                "plain" -> plainRenderer
-                "markdown", "md" -> markdownRenderer
-                "tex", "latex" -> latexRenderer
-                "xournal", "xournalpp" -> xournalppRenderer
-                "html" -> htmlRenderer
-                "renderer" -> ebookRenderer
-                else -> mimeSpecificRenderer
-            }
-        }
     }
 
     fun addStep(step: (RenderMeta) -> Unit): Renderer {

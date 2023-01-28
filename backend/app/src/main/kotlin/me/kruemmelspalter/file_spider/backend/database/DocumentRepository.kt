@@ -12,13 +12,13 @@ import java.util.UUID
 class DocumentRepository {
 
     @Autowired
-    val jdbcTemplate: JdbcTemplate? = null
+    private lateinit var jdbcTemplate: JdbcTemplate
 
     @Autowired
-    val namedParameterJdbcOperations: NamedParameterJdbcOperations? = null
+    private lateinit var namedParameterJdbcOperations: NamedParameterJdbcOperations
 
     fun getDocument(id: UUID): Document? {
-        val documents = jdbcTemplate!!.query(
+        val documents = jdbcTemplate.query(
             "select * from Document where id = ?", { rs, _ -> documentFromResultSet(rs) }, id.toString()
         )
         if (documents.size != 1) return null
@@ -26,20 +26,20 @@ class DocumentRepository {
     }
 
     fun getTags(id: UUID): List<String> {
-        return jdbcTemplate!!.query(
+        return jdbcTemplate.query(
             "select tag from Tag where document = ?", { rs, _ -> rs.getString(1) }, id.toString()
         )
     }
 
     fun deleteDocument(id: UUID) {
-        jdbcTemplate!!.update("delete from Document where id=?", id.toString())
-        jdbcTemplate!!.update("delete from Tag where document=?", id.toString())
+        jdbcTemplate.update("delete from Document where id=?", id.toString())
+        jdbcTemplate.update("delete from Tag where document=?", id.toString())
     }
 
     fun filterDocuments(posFilter: List<String>, negFilter: List<String>): List<Document> {
         if (posFilter.isEmpty()) return ArrayList()
 
-        return namedParameterJdbcOperations!!.query(
+        return namedParameterJdbcOperations.query(
             "select Document.* from Document left join (select document, count(tag) as tagCount from Tag where " +
                 "tag in (:posTags) group by document) as postags on postags.document = Document.id " +
                 (
@@ -53,19 +53,19 @@ class DocumentRepository {
     }
 
     fun removeTags(id: UUID, removeTags: List<String>) {
-        jdbcTemplate!!.batchUpdate("delete from Tag where document=? and tag=?", removeTags, 100) { ps, s ->
+        jdbcTemplate.batchUpdate("delete from Tag where document=? and tag=?", removeTags, 100) { ps, s ->
             ps.setString(1, id.toString()); ps.setString(2, s)
         }
     }
 
     fun addTags(id: UUID, addTags: List<String>) {
-        jdbcTemplate!!.batchUpdate("insert into Tag(document, tag) values (?,?)", addTags, 100) { ps, s ->
+        jdbcTemplate.batchUpdate("insert into Tag(document, tag) values (?,?)", addTags, 100) { ps, s ->
             ps.setString(1, id.toString()); ps.setString(2, s)
         }
     }
 
     fun setTitle(id: UUID, title: String) {
-        jdbcTemplate!!.update("update Document set title=? where id=?", title, id.toString())
+        jdbcTemplate.update("update Document set title=? where id=?", title, id.toString())
     }
 
     private fun documentFromResultSet(rs: ResultSet) = Document(
@@ -88,7 +88,7 @@ class DocumentRepository {
         fileExtension: String?,
     ) {
 
-        if (jdbcTemplate!!.update(
+        if (jdbcTemplate.update(
                 "insert into Document (id, title, renderer, editor, mimeType, fileExtension) values (?,?,?,?,?,?)",
                 uuid.toString(),
                 title,
@@ -99,7 +99,7 @@ class DocumentRepository {
             ) != 1
         ) throw RuntimeException("document creation did not work / didn't affect one row")
 
-        jdbcTemplate!!.batchUpdate("insert into Tag (tag, document) values (?, ?)", tags, 100) { ps, s ->
+        jdbcTemplate.batchUpdate("insert into Tag (tag, document) values (?, ?)", tags, 100) { ps, s ->
             ps.setString(1, s); ps.setString(2, uuid.toString())
         }
     }

@@ -3,9 +3,7 @@ package me.kruemmelspalter.file_spider.backend.services
 import com.fasterxml.uuid.Generators
 import me.kruemmelspalter.file_spider.backend.database.Document
 import me.kruemmelspalter.file_spider.backend.database.DocumentRepository
-import me.kruemmelspalter.file_spider.backend.renderer.RenderCache
 import me.kruemmelspalter.file_spider.backend.renderer.RenderService
-import me.kruemmelspalter.file_spider.backend.renderer.Renderer
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Service

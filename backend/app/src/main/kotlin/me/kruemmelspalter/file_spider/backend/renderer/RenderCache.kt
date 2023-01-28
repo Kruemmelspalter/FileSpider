@@ -1,6 +1,6 @@
 package me.kruemmelspalter.file_spider.backend.renderer
 
-import me.kruemmelspalter.file_spider.backend.database.dao.CacheRepository
+import me.kruemmelspalter.file_spider.backend.database.CacheRepository
 import me.kruemmelspalter.file_spider.backend.services.FileSystemService
 import me.kruemmelspalter.file_spider.backend.services.RenderedDocument
 import org.springframework.beans.factory.annotation.Autowired

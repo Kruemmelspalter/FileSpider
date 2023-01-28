@@ -1,8 +1,8 @@
 package me.kruemmelspalter.file_spider.backend.services
 
 import com.fasterxml.uuid.Generators
-import me.kruemmelspalter.file_spider.backend.database.dao.DocumentRepository
-import me.kruemmelspalter.file_spider.backend.database.model.Document
+import me.kruemmelspalter.file_spider.backend.database.Document
+import me.kruemmelspalter.file_spider.backend.database.DocumentRepository
 import me.kruemmelspalter.file_spider.backend.renderer.RenderCache
 import me.kruemmelspalter.file_spider.backend.renderer.Renderer
 import org.springframework.beans.factory.annotation.Autowired

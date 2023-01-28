@@ -1,6 +1,6 @@
 package me.kruemmelspalter.file_spider.backend.api
 
-import me.kruemmelspalter.file_spider.backend.RenderingException
+import me.kruemmelspalter.file_spider.backend.renderer.RenderingException
 import me.kruemmelspalter.file_spider.backend.services.DocumentMeta
 import me.kruemmelspalter.file_spider.backend.services.DocumentService
 import me.kruemmelspalter.file_spider.backend.services.RenderedDocument

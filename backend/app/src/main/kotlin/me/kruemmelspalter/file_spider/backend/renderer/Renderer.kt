@@ -1,7 +1,6 @@
 package me.kruemmelspalter.file_spider.backend.renderer
 
-import me.kruemmelspalter.file_spider.backend.RenderingException
-import me.kruemmelspalter.file_spider.backend.database.model.Document
+import me.kruemmelspalter.file_spider.backend.database.Document
 import me.kruemmelspalter.file_spider.backend.services.FileSystemService
 import me.kruemmelspalter.file_spider.backend.services.RenderedDocument
 import org.springframework.util.FileSystemUtils

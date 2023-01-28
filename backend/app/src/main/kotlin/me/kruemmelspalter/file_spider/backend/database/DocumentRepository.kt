@@ -1,6 +1,5 @@
-package me.kruemmelspalter.file_spider.backend.database.dao
+package me.kruemmelspalter.file_spider.backend.database
 
-import me.kruemmelspalter.file_spider.backend.database.model.Document
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
@@ -10,7 +9,7 @@ import java.sql.ResultSet
 import java.util.UUID
 
 @Repository
-class DocumentRepository : DocumentDao {
+class DocumentRepository {
 
     @Autowired
     val jdbcTemplate: JdbcTemplate? = null
@@ -18,7 +17,7 @@ class DocumentRepository : DocumentDao {
     @Autowired
     val namedParameterJdbcOperations: NamedParameterJdbcOperations? = null
 
-    override fun getDocument(id: UUID): Document? {
+    fun getDocument(id: UUID): Document? {
         val documents = jdbcTemplate!!.query(
             "select * from Document where id = ?", { rs, _ -> documentFromResultSet(rs) }, id.toString()
         )
@@ -26,18 +25,18 @@ class DocumentRepository : DocumentDao {
         return documents[0]
     }
 
-    override fun getTags(id: UUID): List<String> {
+    fun getTags(id: UUID): List<String> {
         return jdbcTemplate!!.query(
             "select tag from Tag where document = ?", { rs, _ -> rs.getString(1) }, id.toString()
         )
     }
 
-    override fun deleteDocument(id: UUID) {
+    fun deleteDocument(id: UUID) {
         jdbcTemplate!!.update("delete from Document where id=?", id.toString())
         jdbcTemplate!!.update("delete from Tag where document=?", id.toString())
     }
 
-    override fun filterDocuments(posFilter: List<String>, negFilter: List<String>): List<Document> {
+    fun filterDocuments(posFilter: List<String>, negFilter: List<String>): List<Document> {
         if (posFilter.isEmpty()) return ArrayList()
 
         return namedParameterJdbcOperations!!.query(
@@ -53,19 +52,19 @@ class DocumentRepository : DocumentDao {
         ) { rs, _ -> documentFromResultSet(rs) }
     }
 
-    override fun removeTags(id: UUID, removeTags: List<String>) {
+    fun removeTags(id: UUID, removeTags: List<String>) {
         jdbcTemplate!!.batchUpdate("delete from Tag where document=? and tag=?", removeTags, 100) { ps, s ->
             ps.setString(1, id.toString()); ps.setString(2, s)
         }
     }
 
-    override fun addTags(id: UUID, addTags: List<String>) {
+    fun addTags(id: UUID, addTags: List<String>) {
         jdbcTemplate!!.batchUpdate("insert into Tag(document, tag) values (?,?)", addTags, 100) { ps, s ->
             ps.setString(1, id.toString()); ps.setString(2, s)
         }
     }
 
-    override fun setTitle(id: UUID, title: String) {
+    fun setTitle(id: UUID, title: String) {
         jdbcTemplate!!.update("update Document set title=? where id=?", title, id.toString())
     }
 
@@ -79,7 +78,7 @@ class DocumentRepository : DocumentDao {
         rs.getString(7)
     )
 
-    override fun createDocument(
+    fun createDocument(
         uuid: UUID,
         title: String,
         renderer: String,

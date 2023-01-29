@@ -4,7 +4,6 @@ import me.kruemmelspalter.file_spider.backend.renderer.RenderingException
 import me.kruemmelspalter.file_spider.backend.services.DocumentMeta
 import me.kruemmelspalter.file_spider.backend.services.DocumentService
 import me.kruemmelspalter.file_spider.backend.services.RenderedDocument
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
@@ -32,8 +31,6 @@ import javax.servlet.http.HttpServletRequest
 @RestController
 @RequestMapping("/document")
 class DocumentController {
-
-    private val logger = LoggerFactory.getLogger(javaClass)
 
     @Autowired
     private lateinit var documentService: DocumentService

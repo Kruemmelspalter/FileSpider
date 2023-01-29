@@ -1,7 +1,5 @@
 package me.kruemmelspalter.file_spider.backend
 
-import com.typesafe.config.ConfigFactory
-import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.autoconfigure.web.servlet.DispatcherServletAutoConfiguration
 import org.springframework.boot.builder.SpringApplicationBuilder
@@ -21,9 +19,6 @@ import java.util.Properties
 @EnableJdbcRepositories(basePackages = ["com.springdata"])
 class FileSpiderApplication : WebMvcConfigurer, WebServerFactoryCustomizer<ConfigurableWebServerFactory>,
     AbstractJdbcConfiguration() {
-
-    private val logger = LoggerFactory.getLogger(javaClass)
-    private val config = ConfigFactory.load()
 
     // enable OPTIONS request
     @Bean(name = [DispatcherServletAutoConfiguration.DEFAULT_DISPATCHER_SERVLET_BEAN_NAME])

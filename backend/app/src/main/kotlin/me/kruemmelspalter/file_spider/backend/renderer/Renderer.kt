@@ -6,7 +6,6 @@ import me.kruemmelspalter.file_spider.backend.services.RenderedDocument
 import org.slf4j.LoggerFactory
 import org.springframework.util.FileSystemUtils
 import java.io.FileInputStream
-import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -87,14 +86,6 @@ class Renderer(private val name: String) {
         return this
     }
 
-    fun output(stream: InputStream, mimeType: String, contentLength: Long, fileName: String): Renderer {
-        return output { RenderedDocument(stream, mimeType, contentLength, fileName) }
-    }
-
-    fun output(document: RenderedDocument): Renderer {
-        return output { document }
-    }
-
     fun output(documentProvider: (RenderMeta) -> RenderedDocument): Renderer {
         return addStep { it.output = documentProvider(it) }
     }
@@ -157,11 +148,6 @@ class Renderer(private val name: String) {
         }
     }
 
-    fun useRenderer(rendererProvider: (RenderMeta) -> Renderer): Renderer {
-        return addStep {
-            it.output = rendererProvider(it).render(it.document, it.fsService, it.cache)
-        }
-    }
 
     fun resolveLinks(filenameProvider: (RenderMeta) -> String = { it.fileName }): Renderer {
         return replace(

@@ -1,6 +1,5 @@
-package me.kruemmelspalter.file_spider.backend.database.dao
+package me.kruemmelspalter.file_spider.backend.database
 
-import me.kruemmelspalter.file_spider.backend.database.model.Document
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
@@ -10,37 +9,37 @@ import java.sql.ResultSet
 import java.util.UUID
 
 @Repository
-class DocumentRepository : DocumentDao {
+class DocumentRepository {
 
     @Autowired
-    val jdbcTemplate: JdbcTemplate? = null
+    private lateinit var jdbcTemplate: JdbcTemplate
 
     @Autowired
-    val namedParameterJdbcOperations: NamedParameterJdbcOperations? = null
+    private lateinit var namedParameterJdbcOperations: NamedParameterJdbcOperations
 
-    override fun getDocument(id: UUID): Document? {
-        val documents = jdbcTemplate!!.query(
+    fun getDocument(id: UUID): Document? {
+        val documents = jdbcTemplate.query(
             "select * from Document where id = ?", { rs, _ -> documentFromResultSet(rs) }, id.toString()
         )
         if (documents.size != 1) return null
         return documents[0]
     }
 
-    override fun getTags(id: UUID): List<String> {
-        return jdbcTemplate!!.query(
+    fun getTags(id: UUID): List<String> {
+        return jdbcTemplate.query(
             "select tag from Tag where document = ?", { rs, _ -> rs.getString(1) }, id.toString()
         )
     }
 
-    override fun deleteDocument(id: UUID) {
-        jdbcTemplate!!.update("delete from Document where id=?", id.toString())
-        jdbcTemplate!!.update("delete from Tag where document=?", id.toString())
+    fun deleteDocument(id: UUID) {
+        jdbcTemplate.update("delete from Document where id=?", id.toString())
+        jdbcTemplate.update("delete from Tag where document=?", id.toString())
     }
 
-    override fun filterDocuments(posFilter: List<String>, negFilter: List<String>): List<Document> {
+    fun filterDocuments(posFilter: List<String>, negFilter: List<String>): List<Document> {
         if (posFilter.isEmpty()) return ArrayList()
 
-        return namedParameterJdbcOperations!!.query(
+        return namedParameterJdbcOperations.query(
             "select Document.* from Document left join (select document, count(tag) as tagCount from Tag where " +
                 "tag in (:posTags) group by document) as postags on postags.document = Document.id " +
                 (
@@ -53,20 +52,20 @@ class DocumentRepository : DocumentDao {
         ) { rs, _ -> documentFromResultSet(rs) }
     }
 
-    override fun removeTags(id: UUID, removeTags: List<String>) {
-        jdbcTemplate!!.batchUpdate("delete from Tag where document=? and tag=?", removeTags, 100) { ps, s ->
+    fun removeTags(id: UUID, removeTags: List<String>) {
+        jdbcTemplate.batchUpdate("delete from Tag where document=? and tag=?", removeTags, 100) { ps, s ->
             ps.setString(1, id.toString()); ps.setString(2, s)
         }
     }
 
-    override fun addTags(id: UUID, addTags: List<String>) {
-        jdbcTemplate!!.batchUpdate("insert into Tag(document, tag) values (?,?)", addTags, 100) { ps, s ->
+    fun addTags(id: UUID, addTags: List<String>) {
+        jdbcTemplate.batchUpdate("insert into Tag(document, tag) values (?,?)", addTags, 100) { ps, s ->
             ps.setString(1, id.toString()); ps.setString(2, s)
         }
     }
 
-    override fun setTitle(id: UUID, title: String) {
-        jdbcTemplate!!.update("update Document set title=? where id=?", title, id.toString())
+    fun setTitle(id: UUID, title: String) {
+        jdbcTemplate.update("update Document set title=? where id=?", title, id.toString())
     }
 
     private fun documentFromResultSet(rs: ResultSet) = Document(
@@ -79,7 +78,7 @@ class DocumentRepository : DocumentDao {
         rs.getString(7)
     )
 
-    override fun createDocument(
+    fun createDocument(
         uuid: UUID,
         title: String,
         renderer: String,
@@ -89,7 +88,7 @@ class DocumentRepository : DocumentDao {
         fileExtension: String?,
     ) {
 
-        if (jdbcTemplate!!.update(
+        if (jdbcTemplate.update(
                 "insert into Document (id, title, renderer, editor, mimeType, fileExtension) values (?,?,?,?,?,?)",
                 uuid.toString(),
                 title,
@@ -100,7 +99,7 @@ class DocumentRepository : DocumentDao {
             ) != 1
         ) throw RuntimeException("document creation did not work / didn't affect one row")
 
-        jdbcTemplate!!.batchUpdate("insert into Tag (tag, document) values (?, ?)", tags, 100) { ps, s ->
+        jdbcTemplate.batchUpdate("insert into Tag (tag, document) values (?, ?)", tags, 100) { ps, s ->
             ps.setString(1, s); ps.setString(2, uuid.toString())
         }
     }

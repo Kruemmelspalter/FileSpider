@@ -8,11 +8,9 @@ import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.util.FileSystemUtils
 import org.springframework.web.server.ResponseStatusException
-import java.io.BufferedReader
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.io.FileReader
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
@@ -58,23 +56,6 @@ class FileSystemService {
 
     fun getFileFromID(id: UUID, fileExtension: String?): File {
         return getDocumentPathFromID(id, fileExtension).toFile()
-    }
-
-    fun getInputStreamFromID(id: UUID, fileExtension: String?): InputStream {
-        return FileInputStream(getFileFromID(id, fileExtension))
-    }
-
-    fun getContentFromID(id: UUID, fileExtension: String?): String {
-        val resultBuilder = StringBuilder()
-        val br = BufferedReader(FileReader(getFileFromID(id, fileExtension)))
-        br.use {
-            var line = br.readLine()
-            while (line != null) {
-                resultBuilder.append(line).append("\n")
-                line = br.readLine()
-            }
-        }
-        return resultBuilder.toString()
     }
 
     fun getFileAttributesFromID(id: UUID, fileExtension: String?): BasicFileAttributes {

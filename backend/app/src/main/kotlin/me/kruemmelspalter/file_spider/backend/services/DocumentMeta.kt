@@ -1,6 +1,6 @@
 package me.kruemmelspalter.file_spider.backend.services
 
-import me.kruemmelspalter.file_spider.backend.database.model.Document
+import me.kruemmelspalter.file_spider.backend.database.Document
 import java.sql.Timestamp
 import java.util.UUID
 

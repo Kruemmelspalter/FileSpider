@@ -24,7 +24,15 @@ services:
     backend:
         image: ghcr.io/kruemmelspalter/filespider-backend:${FILESPIDER_TAG}
         environment:
-            APP_OPTS: -Ddatabase.host=database -Ddatabase.username=user -Ddatabase.password=password -Ddatabase.database=database
+            APP_OPTS: |
+                -Ddatabase.host=database
+                -Ddatabase.username=user
+                -Ddatabase.password=password
+                -Ddatabase.database=database
+                -Dlogging.level.org.apache.tomcat.util.net.NioEndpoint=INFO
+                -Dlogging.level.org.apache.catalina.session.ManagerBase=INFO
+                -Dlogging.level.org.apache.coyote.http11.Http11Processor=INFO
+                -Dlogging.level.root=INFO # change according to needs
         volumes:
             - ./data/filespider:/var/lib/filespider
         depends_on:

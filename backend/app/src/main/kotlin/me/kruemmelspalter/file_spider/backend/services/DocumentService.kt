@@ -1,10 +1,9 @@
 package me.kruemmelspalter.file_spider.backend.services
 
 import com.fasterxml.uuid.Generators
-import me.kruemmelspalter.file_spider.backend.database.dao.DocumentRepository
-import me.kruemmelspalter.file_spider.backend.database.model.Document
-import me.kruemmelspalter.file_spider.backend.renderer.RenderCache
-import me.kruemmelspalter.file_spider.backend.renderer.Renderer
+import me.kruemmelspalter.file_spider.backend.database.Document
+import me.kruemmelspalter.file_spider.backend.database.DocumentRepository
+import me.kruemmelspalter.file_spider.backend.renderer.RenderService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Service
@@ -16,50 +15,49 @@ import javax.servlet.ServletContext
 @Service
 class DocumentService {
 
-    private val uuidGenerator = Generators.timeBasedGenerator()!!
+    private val uuidGenerator = Generators.timeBasedGenerator()
 
     @Autowired
-    val documentRepository: DocumentRepository? = null
+    private lateinit var documentRepository: DocumentRepository
 
     @Autowired
-    val fsService: FileSystemService? = null
+    private lateinit var renderService: RenderService
 
     @Autowired
-    private lateinit var renderCache: RenderCache
+    private lateinit var fsService: FileSystemService
 
     fun getDocumentMeta(id: UUID): DocumentMeta? {
-        val document = documentRepository!!.getDocument(id)
+        val document = documentRepository.getDocument(id)
         return documentToMeta(document ?: return null)
     }
 
     private fun documentToMeta(document: Document): DocumentMeta {
-        val attributes = fsService!!.getFileAttributesFromID(document.id, document.fileExtension)
+        val attributes = fsService.getFileAttributesFromID(document.id, document.fileExtension)
         return DocumentMeta(
             document,
             Timestamp(attributes.creationTime().toMillis()),
             Timestamp(attributes.lastModifiedTime().toMillis()),
             Timestamp(attributes.lastAccessTime().toMillis()),
-            documentRepository!!.getTags(document.id)
+            documentRepository.getTags(document.id)
         )
     }
 
     fun filterDocuments(posFilter: List<String>, negFilter: List<String>): List<DocumentMeta> {
-        return documentRepository!!.filterDocuments(posFilter, negFilter).map { documentToMeta(it) }
+        return documentRepository.filterDocuments(posFilter, negFilter).map { documentToMeta(it) }
     }
 
-    fun renderDocument(id: UUID): RenderedDocument? {
-        val document = documentRepository!!.getDocument(id)
-        return if (document == null) null else Renderer.getRenderer(document.renderer).render(document, fsService!!, renderCache)
+    fun renderDocument(id: UUID, useCache: Boolean = true): RenderedDocument? {
+        return renderService.renderDocument(documentRepository.getDocument(id) ?: return null, useCache)
     }
 
     fun readDocumentLog(id: UUID): InputStream? {
-        documentRepository!!.getDocument(id) ?: return null
+        documentRepository.getDocument(id) ?: return null
 
-        return fsService!!.readLog(id)
+        return fsService.readLog(id)
     }
 
     fun setTitle(id: UUID, title: String) {
-        documentRepository!!.setTitle(id, title)
+        documentRepository.setTitle(id, title)
     }
 
     fun createDocument(
@@ -73,7 +71,7 @@ class DocumentService {
     ): UUID {
         val uuid = uuidGenerator.generate()
 
-        documentRepository!!.createDocument(
+        documentRepository.createDocument(
             uuid,
             title ?: "Untitled",
             renderer ?: "plain",
@@ -83,9 +81,9 @@ class DocumentService {
             fileExtension,
         )
 
-        fsService!!.createDocument(uuid, fileExtension)
+        fsService.createDocument(uuid, fileExtension)
         if (content != null) {
-            fsService!!.writeToDocument(uuid, fileExtension, content)
+            fsService.writeToDocument(uuid, fileExtension, content)
             content.close()
         }
 
@@ -93,19 +91,19 @@ class DocumentService {
     }
 
     fun addTags(id: UUID, addTags: List<String>) {
-        documentRepository!!.addTags(id, addTags)
+        documentRepository.addTags(id, addTags)
     }
 
     fun removeTags(id: UUID, removeTags: List<String>) {
-        documentRepository!!.removeTags(id, removeTags)
+        documentRepository.removeTags(id, removeTags)
     }
 
     fun deleteDocument(id: UUID) {
-        documentRepository!!.deleteDocument(id)
-        fsService!!.deleteDocument(id)
+        documentRepository.deleteDocument(id)
+        fsService.deleteDocument(id)
     }
 
     fun getDocumentResource(id: UUID, fileName: String, servletContext: ServletContext): Resource? {
-        return fsService!!.getDocumentResource(id, fileName, servletContext)
+        return fsService.getDocumentResource(id, fileName, servletContext)
     }
 }

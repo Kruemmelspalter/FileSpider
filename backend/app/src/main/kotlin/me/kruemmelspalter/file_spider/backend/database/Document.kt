@@ -1,4 +1,4 @@
-package me.kruemmelspalter.file_spider.backend.database.model
+package me.kruemmelspalter.file_spider.backend.database
 
 import org.springframework.data.annotation.Id
 import java.sql.Timestamp

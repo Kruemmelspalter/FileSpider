@@ -1,6 +1,6 @@
 package me.kruemmelspalter.file_spider.backend.api
 
-import me.kruemmelspalter.file_spider.backend.RenderingException
+import me.kruemmelspalter.file_spider.backend.renderer.RenderingException
 import me.kruemmelspalter.file_spider.backend.services.DocumentMeta
 import me.kruemmelspalter.file_spider.backend.services.DocumentService
 import me.kruemmelspalter.file_spider.backend.services.RenderedDocument
@@ -33,19 +33,16 @@ import javax.servlet.http.HttpServletRequest
 class DocumentController {
 
     @Autowired
-    val documentService: DocumentService? = null
+    private lateinit var documentService: DocumentService
 
     @GetMapping("/")
     fun searchDocuments(@RequestParam("filter") filterString: String): List<DocumentMeta> {
-        if (!Pattern.matches(
-                "^!?\\p{L}+(?:,!?\\p{L}+)*\$",
-                filterString
-            )
-        ) throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+        if (!Pattern.matches("^!?\\p{L}+(?:,!?\\p{L}+)*\$", filterString))
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST)
 
         val filters = filterString.split(",")
 
-        return documentService!!.filterDocuments(
+        return documentService.filterDocuments(
             filters.filter { !it.startsWith("!") },
             filters.filter { it.startsWith("!") }.map { it.substring(1) }
         )
@@ -62,39 +59,41 @@ class DocumentController {
         @RequestParam fileExtension: String?,
     ): String {
         if (mimeType == null && file == null) throw ResponseStatusException(HttpStatus.BAD_REQUEST)
-        val uuid = if (file != null)
-            documentService!!.createDocument(title, renderer, editor, mimeType ?: file.contentType, tags, fileExtension, file.inputStream)
-        else documentService!!.createDocument(title, renderer, editor, mimeType!!, tags, fileExtension, null)
+        val uuid = if (file != null) documentService.createDocument(
+            title, renderer, editor, mimeType ?: file.contentType, tags, fileExtension, file.inputStream
+        )
+        else documentService.createDocument(title, renderer, editor, mimeType!!, tags, fileExtension, null)
         return uuid.toString()
     }
 
     @GetMapping("/{id}")
     fun getDocumentMeta(@PathVariable("id") documentId: UUID): DocumentMeta {
-        return documentService!!.getDocumentMeta(documentId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        return documentService.getDocumentMeta(documentId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
     }
 
     data class DocumentChange(val addTags: List<String>?, val removeTags: List<String>?, val title: String?)
 
     @PatchMapping("/{id}")
     fun changeDocumentTags(@PathVariable id: UUID, @RequestBody change: DocumentChange) {
-        if (change.addTags != null) documentService!!.addTags(id, change.addTags)
-        if (change.removeTags != null) documentService!!.removeTags(id, change.removeTags)
-        if (change.title != null) documentService!!.setTitle(id, change.title)
+        if (change.addTags != null) documentService.addTags(id, change.addTags)
+        if (change.removeTags != null) documentService.removeTags(id, change.removeTags)
+        if (change.title != null) documentService.setTitle(id, change.title)
     }
 
     @DeleteMapping("/{id}")
     fun deleteDocument(@PathVariable id: UUID) {
-        documentService!!.deleteDocument(id)
+        documentService.deleteDocument(id)
     }
 
     @GetMapping("/{id}/rendered")
     fun getRenderedDocument(
         @PathVariable("id") documentId: UUID,
-        @RequestParam("download") download: Boolean?
+        @RequestParam download: Boolean?,
+        @RequestParam cache: Boolean?,
     ): ResponseEntity<Resource> {
 
-        val renderedDocument: RenderedDocument =
-            documentService!!.renderDocument(documentId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        val renderedDocument: RenderedDocument = documentService.renderDocument(documentId, cache ?: true)
+            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
         val headers = HttpHeaders()
         headers.contentType = MediaType.parseMediaType(renderedDocument.contentType)
@@ -102,10 +101,7 @@ class DocumentController {
         if (download == true) headers.contentDisposition =
             ContentDisposition.parse("attachment; filename=" + renderedDocument.fileName)
 
-        return ResponseEntity
-            .status(HttpStatus.OK)
-            .headers(headers)
-            .body(InputStreamResource(renderedDocument.stream))
+        return ResponseEntity.status(HttpStatus.OK).headers(headers).body(InputStreamResource(renderedDocument.stream))
     }
 
     @GetMapping("/{id}/rendered/{file}")
@@ -114,18 +110,21 @@ class DocumentController {
         @PathVariable("file") fileName: String,
         request: HttpServletRequest
     ): Resource? {
-        return documentService!!.getDocumentResource(documentId, fileName, request.servletContext)
+        return documentService.getDocumentResource(documentId, fileName, request.servletContext)
     }
 
     @GetMapping("/{id}/renderlog")
     fun getRenderLog(@PathVariable id: UUID): InputStreamResource {
         return InputStreamResource(
-            documentService!!.readDocumentLog(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+            documentService.readDocumentLog(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
         )
     }
 
     @ExceptionHandler(value = [RenderingException::class])
     fun renderingException(exception: RenderingException?): ResponseEntity<String> {
-        return ResponseEntity(exception!!.message, HttpStatus.INTERNAL_SERVER_ERROR)
+        return ResponseEntity
+            .internalServerError()
+            .contentType(MediaType.TEXT_PLAIN)
+            .body(exception?.message)
     }
 }

@@ -1,4 +1,4 @@
-package me.kruemmelspalter.file_spider.backend.database.dao
+package me.kruemmelspalter.file_spider.backend.database
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.dao.support.DataAccessUtils

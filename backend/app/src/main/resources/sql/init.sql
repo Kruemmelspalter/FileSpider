@@ -11,7 +11,7 @@ create table Document (
 
 create table Tag (
     document uuid not null,
-    tag varchar(20) not null,
+    tag varchar(50) not null,
     primary key (document, tag)
 );
 

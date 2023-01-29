@@ -41,13 +41,13 @@ class DocumentRepository {
 
         return namedParameterJdbcOperations.query(
             "select Document.* from Document left join (select document, count(tag) as tagCount from Tag where " +
-                    "tag in (:posTags) group by document) as postags on postags.document = Document.id " +
-                    (
-                            if (negFilter.isEmpty()) "join (select NULL as tagCount) as negtags" else
-                                "left join (select document, count(tag) as tagCount from Tag " +
-                                        "where tag in (:negTags) group by document) as negtags on negtags.document = Document.id"
-                            ) +
-                    " where postags.tagCount = :ptCount and negtags.tagCount IS NULL",
+                "tag in (:posTags) group by document) as postags on postags.document = Document.id " +
+                (
+                    if (negFilter.isEmpty()) "join (select NULL as tagCount) as negtags" else
+                        "left join (select document, count(tag) as tagCount from Tag " +
+                            "where tag in (:negTags) group by document) as negtags on negtags.document = Document.id"
+                    ) +
+                " where postags.tagCount = :ptCount and negtags.tagCount IS NULL",
             MapSqlParameterSource(mapOf("posTags" to posFilter, "negTags" to negFilter, "ptCount" to posFilter.size))
         ) { rs, _ -> documentFromResultSet(rs) }
     }

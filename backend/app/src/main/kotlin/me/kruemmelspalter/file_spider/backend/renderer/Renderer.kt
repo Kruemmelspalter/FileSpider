@@ -148,7 +148,6 @@ class Renderer(private val name: String) {
         }
     }
 
-
     fun resolveLinks(filenameProvider: (RenderMeta) -> String = { it.fileName }): Renderer {
         return replace(
             mapOf(

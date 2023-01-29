@@ -46,8 +46,8 @@ class DocumentService {
         return documentRepository.filterDocuments(posFilter, negFilter).map { documentToMeta(it) }
     }
 
-    fun renderDocument(id: UUID): RenderedDocument? {
-        return renderService.renderDocument(documentRepository.getDocument(id) ?: return null)
+    fun renderDocument(id: UUID, useCache: Boolean = true): RenderedDocument? {
+        return renderService.renderDocument(documentRepository.getDocument(id) ?: return null, useCache)
     }
 
     fun readDocumentLog(id: UUID): InputStream? {

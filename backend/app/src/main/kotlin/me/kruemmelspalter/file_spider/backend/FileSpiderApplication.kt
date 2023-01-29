@@ -32,6 +32,7 @@ class FileSpiderApplication : WebMvcConfigurer, WebServerFactoryCustomizer<Confi
         dispatcherServlet.setDispatchOptionsRequest(true)
         return dispatcherServlet
     }
+
     override fun addResourceHandlers(registry: ResourceHandlerRegistry) {
         registry.addResourceHandler("/libs/katex/**").addResourceLocations("classpath:/katex/")
     }

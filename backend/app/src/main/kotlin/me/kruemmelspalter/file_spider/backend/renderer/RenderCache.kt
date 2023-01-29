@@ -3,6 +3,7 @@ package me.kruemmelspalter.file_spider.backend.renderer
 import me.kruemmelspalter.file_spider.backend.database.CacheRepository
 import me.kruemmelspalter.file_spider.backend.services.FileSystemService
 import me.kruemmelspalter.file_spider.backend.services.RenderedDocument
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.io.FileInputStream
@@ -17,6 +18,8 @@ import java.util.UUID
 @Service
 class RenderCache {
 
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     @Autowired
     private lateinit var fsService: FileSystemService
 
@@ -24,11 +27,17 @@ class RenderCache {
     private lateinit var cacheRepository: CacheRepository
 
     fun isCacheValid(id: UUID): Boolean {
-        return computeHash(id).contentEquals(cacheRepository.getCacheEntry(id)?.hash)
+        logger.debug("validating cache for id $id")
+        val computedHash = computeHash(id)
+        val cachedHash = cacheRepository.getCacheEntry(id)?.hash
+        val isValid = computedHash.contentEquals(cachedHash)
+        logger.debug("computed: ${computedHash.toHex()} cached: ${cachedHash?.toHex()} valid: $isValid")
+        return isValid
     }
 
     fun getCachedRender(id: UUID): RenderedDocument? {
         val cacheEntry = cacheRepository.getCacheEntry(id) ?: return null
+        logger.trace("serving cached file ${Paths.get(fsService.getCacheDirectory().toString(), id.toString())}")
         return RenderedDocument(
             FileInputStream(Paths.get(fsService.getCacheDirectory().toString(), id.toString()).toFile()),
             cacheEntry.mimeType,
@@ -41,6 +50,7 @@ class RenderCache {
     }
 
     fun cacheRender(id: UUID, renderedDocument: RenderedDocument?): RenderedDocument? {
+        logger.debug("setting cache entry for id $id")
         if (renderedDocument == null) return null
         val cacheFile = Paths.get(fsService.getCacheDirectory().toString(), id.toString()).toFile()
         val outStream = FileOutputStream(cacheFile)
@@ -50,16 +60,18 @@ class RenderCache {
         return RenderedDocument(
             FileInputStream(cacheFile),
             renderedDocument.contentType,
-            renderedDocument.contentLength,
+            Files.readAttributes(cacheFile.toPath(), BasicFileAttributes::class.java).size(),
             renderedDocument.fileName
         )
     }
 
     private fun computeHash(id: UUID): ByteArray {
+        logger.debug("computing hash for id $id")
         val md = MessageDigest.getInstance("MD5")
         val directory = fsService.getDirectoryPathFromID(id)
         val files = Files.find(directory, 5, { _, _ -> true })
         files.forEach { path ->
+            logger.trace("adding file $path")
             md.update(path.toString().toByteArray())
             val attributes = Files.readAttributes(path, BasicFileAttributes::class.java)
             md.update(longToByteArray(attributes.size()))
@@ -73,4 +85,6 @@ class RenderCache {
         ByteBuffer.wrap(bytes).putLong(value)
         return bytes.copyOfRange(4, 8)
     }
+
+    private fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
 }

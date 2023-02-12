@@ -114,10 +114,11 @@ class DocumentController {
     }
 
     @GetMapping("/{id}/renderlog")
-    fun getRenderLog(@PathVariable id: UUID): InputStreamResource {
-        return InputStreamResource(
-            documentService.readDocumentLog(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
-        )
+    fun getRenderLog(@PathVariable id: UUID): ResponseEntity<InputStreamResource> {
+        return ResponseEntity
+            .ok()
+            .contentType(MediaType.TEXT_PLAIN)
+            .body(InputStreamResource(documentService.readDocumentLog(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)))
     }
 
     @ExceptionHandler(value = [RenderingException::class])

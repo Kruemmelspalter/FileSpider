@@ -58,13 +58,11 @@ class Renderer(private val name: String) {
                 )
             }.resolveLinks { "out.html" }.outputFile("text/html", "html") { "out.html" }
 
-        internal val latexRenderer = Renderer("latex").tempDir().command(10) {
-            listOf(
-                "bash",
-                "-c",
-                "pdflatex -draftmode -halt-on-error ${it.fileName} && pdflatex -halt-on-error -jobname=out ${it.fileName}"
-            )
-        }.outputFile("application/pdf", "pdf") { "out.pdf" }
+        internal val latexRenderer =
+            Renderer("latex").tempDir()
+                .command(5) { listOf("pdflatex", "-draftmode", "-halt-on-error", it.fileName) }
+                .command(5) { listOf("pdflatex", "-halt-on-error", it.fileName) }
+                .outputFile("application/pdf", "pdf") { "${it.document.id}.pdf" }
 
         internal val xournalppRenderer = Renderer("xournalpp").tempDir().command(2) {
             listOf(
@@ -113,7 +111,11 @@ class Renderer(private val name: String) {
     ): Renderer {
         return addStep {
             val pb = ProcessBuilder(commandProvider(it)).redirectErrorStream(true)
-                .redirectOutput(it.fsService.getLogPathFromID(it.document.id).toFile())
+                .redirectOutput(
+                    ProcessBuilder.Redirect.appendTo(
+                        it.fsService.getLogPathFromID(it.document.id).toFile()
+                    )
+                )
                 .directory(it.workingDirectory.toFile())
             environment.toMap(pb.environment())
             val process = pb.start()

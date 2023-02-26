@@ -15,6 +15,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 import java.util.UUID
 
+typealias Hash = ByteArray
 @Service
 class RenderCache {
 
@@ -49,14 +50,14 @@ class RenderCache {
         )
     }
 
-    fun cacheRender(id: UUID, renderedDocument: RenderedDocument?): RenderedDocument? {
+    fun cacheRender(id: UUID, hash: Hash, renderedDocument: RenderedDocument?): RenderedDocument? {
         logger.debug("setting cache entry for id $id")
         if (renderedDocument == null) return null
         val cacheFile = Paths.get(fsService.getCacheDirectory().toString(), id.toString()).toFile()
         val outStream = FileOutputStream(cacheFile)
         renderedDocument.stream.transferTo(outStream)
         outStream.close()
-        cacheRepository.setCacheEntry(id, computeHash(id), renderedDocument.contentType, renderedDocument.fileName)
+        cacheRepository.setCacheEntry(id, hash, renderedDocument.contentType, renderedDocument.fileName)
         return RenderedDocument(
             FileInputStream(cacheFile),
             renderedDocument.contentType,
@@ -65,7 +66,7 @@ class RenderCache {
         )
     }
 
-    private fun computeHash(id: UUID): ByteArray {
+    fun computeHash(id: UUID): Hash {
         logger.debug("computing hash for id $id")
         val md = MessageDigest.getInstance("MD5")
         val directory = fsService.getDirectoryPathFromID(id)
@@ -80,11 +81,11 @@ class RenderCache {
         return md.digest()
     }
 
-    private fun longToByteArray(value: Long): ByteArray {
-        val bytes = ByteArray(8)
+    private fun longToByteArray(value: Long): Hash {
+        val bytes = Hash(8)
         ByteBuffer.wrap(bytes).putLong(value)
         return bytes.copyOfRange(4, 8)
     }
 
-    private fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
+    private fun Hash.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
 }

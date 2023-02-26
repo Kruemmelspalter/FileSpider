@@ -181,7 +181,7 @@ class Renderer(private val name: String) {
                 fsService.getDirectoryPathFromID(document.id),
                 fsService,
                 document.id.toString() + if (document.fileExtension != null) "." + document.fileExtension else "",
-                cache,
+                cache.computeHash(document.id)
             ),
             cache, useCache
         )
@@ -195,7 +195,7 @@ class Renderer(private val name: String) {
         }
         for (step in renderSteps) step(meta)
         for (step in meta.cleanup) step(meta)
-        return cache.cacheRender(meta.document.id, meta.output!!)
+        return cache.cacheRender(meta.document.id, meta.inputHash, meta.output!!)
     }
 
     data class RenderMeta(
@@ -203,7 +203,7 @@ class Renderer(private val name: String) {
         var workingDirectory: Path,
         val fsService: FileSystemService,
         val fileName: String,
-        val cache: RenderCache,
+        val inputHash: Hash,
         var output: RenderedDocument? = null,
         val cleanup: MutableList<(RenderMeta) -> Unit> = mutableListOf(),
     )

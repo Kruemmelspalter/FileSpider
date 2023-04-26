@@ -19,7 +19,13 @@ class RenderService {
     private lateinit var renderCache: RenderCache
 
     fun renderDocument(document: Document, useCache: Boolean = true): RenderedDocument? {
-        return getRenderer(document).render(document, fsService, renderCache, useCache)
+
+        val hash = renderCache.computeHash(document.id)
+        if (useCache) {
+            if (renderCache.isCacheValid(document.id, hash)) return renderCache.getCachedRender(document.id)
+            logger.trace("document cache is invalid or nonexistent, rendering")
+        }
+        return renderCache.cacheRender(document.id, hash, getRenderer(document).render(document, fsService))
     }
 
     fun getRenderer(document: Document): Renderer {

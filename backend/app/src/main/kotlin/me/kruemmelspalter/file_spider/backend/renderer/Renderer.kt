@@ -31,17 +31,7 @@ class Renderer(private val name: String) {
         internal val htmlRenderer =
             Renderer("html").tempDir().resolveLinks().outputFile("text/html", "html") { it.fileName }
 
-        internal val markdownRenderer = Renderer("markdown").tempDir().copy({ it.fileName }, { "tmp0.md" }).command(2) {
-            listOf(
-                "mmdc",
-                "-p", "/opt/filespider/mmdc-puppeteer-config.json",
-                "-i", "tmp0.md",
-                "-o", "tmp1.md",
-                "-e", "png",
-                "-w", "19200px",
-            )
-        }
-            .replace(mapOf("!\\[diagram\\]\\((\\.\\/tmp1-[0-9]+\\.png)\\)" to "<img src=\"\\1\" style=\"max-width: 100%\" \\/>")) { "tmp1.md" }
+        internal val markdownRenderer = Renderer("markdown").tempDir()
             .command(10) {
                 listOf(
                     "pandoc",
@@ -54,7 +44,7 @@ class Renderer(private val name: String) {
                     "--metadata",
                     "title=${it.document.title}",
                     "--self-contained",
-                    "tmp1.md"
+                    it.fileName
                 )
             }.resolveLinks { "out.html" }.outputFile("text/html", "html") { "out.html" }
 
@@ -68,7 +58,8 @@ class Renderer(private val name: String) {
             listOf(
                 "sh",
                 "-c",
-                "gunzip -c -S .${it.document.fileExtension} ${it.fileName} |sed -r -e 's/filename=\".*\\/${it.document.id}\\/(.*)\" /filename=\"\\1\" /g'|gzip>tmp.xopp"
+                "gunzip -c -S .${it.document.fileExtension} ${it.fileName} |" +
+                        "sed -r -e 's/filename=\".*\\/${it.document.id}\\/(.*)\" /filename=\"\\1\" /g'|gzip>tmp.xopp"
             )
         }.command(10) { listOf("xournalpp", "-p", "out.pdf", "tmp.xopp") }
             .outputFile("application/pdf", "pdf") { "out.pdf" }
@@ -171,31 +162,24 @@ class Renderer(private val name: String) {
 
     fun render(
         document: Document,
-        fsService: FileSystemService,
-        cache: RenderCache,
-        useCache: Boolean = true
+        fsService: FileSystemService
     ): RenderedDocument? {
         return render(
             RenderMeta(
                 document,
                 fsService.getDirectoryPathFromID(document.id),
                 fsService,
-                document.id.toString() + if (document.fileExtension != null) "." + document.fileExtension else "",
-                cache.computeHash(document.id)
-            ),
-            cache, useCache
+                document.id.toString() + if (document.fileExtension != null) "." + document.fileExtension else ""
+            )
         )
     }
 
-    private fun render(meta: RenderMeta, cache: RenderCache, useCache: Boolean = true): RenderedDocument? {
+    private fun render(meta: RenderMeta): RenderedDocument? {
         logger.debug("Rendering using renderer $name")
-        if (useCache) {
-            if (cache.isCacheValid(meta.document.id)) return cache.getCachedRender(meta.document.id)
-            logger.trace("document cache is invalid or nonexistent, rendering")
-        }
+        meta.fsService.getLogPathFromID(meta.document.id).toFile().delete()
         for (step in renderSteps) step(meta)
         for (step in meta.cleanup) step(meta)
-        return cache.cacheRender(meta.document.id, meta.inputHash, meta.output!!)
+        return meta.output!!
     }
 
     data class RenderMeta(
@@ -203,7 +187,6 @@ class Renderer(private val name: String) {
         var workingDirectory: Path,
         val fsService: FileSystemService,
         val fileName: String,
-        val inputHash: Hash,
         var output: RenderedDocument? = null,
         val cleanup: MutableList<(RenderMeta) -> Unit> = mutableListOf(),
     )

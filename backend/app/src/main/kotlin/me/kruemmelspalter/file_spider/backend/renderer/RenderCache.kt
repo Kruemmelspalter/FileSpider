@@ -27,9 +27,9 @@ class RenderCache {
     @Autowired
     private lateinit var cacheRepository: CacheRepository
 
-    fun isCacheValid(id: UUID): Boolean {
+    fun isCacheValid(id: UUID, compHash: Hash? = null): Boolean {
         logger.debug("validating cache for id $id")
-        val computedHash = computeHash(id)
+        val computedHash = compHash ?: computeHash(id)
         val cachedHash = cacheRepository.getCacheEntry(id)?.hash
         val isValid = computedHash.contentEquals(cachedHash)
         logger.debug("computed: ${computedHash.toHex()} cached: ${cachedHash?.toHex()} valid: $isValid")

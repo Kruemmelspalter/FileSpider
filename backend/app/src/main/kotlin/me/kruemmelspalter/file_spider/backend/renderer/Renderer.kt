@@ -6,6 +6,7 @@ import me.kruemmelspalter.file_spider.backend.services.RenderedDocument
 import org.slf4j.LoggerFactory
 import org.springframework.util.FileSystemUtils
 import java.io.FileInputStream
+import java.io.FileWriter
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -58,8 +59,7 @@ class Renderer(private val name: String) {
             listOf(
                 "sh",
                 "-c",
-                "gunzip -c -S .${it.document.fileExtension} ${it.fileName} |" +
-                        "sed -r -e 's/filename=\".*\\/${it.document.id}\\/(.*)\" /filename=\"\\1\" /g'|gzip>tmp.xopp"
+                "gunzip -c -S .${it.document.fileExtension} ${it.fileName} |sed -r -e 's/filename=\".*\\/${it.document.id}\\/(.*)\" /filename=\"\\1\" /g'|gzip>tmp.xopp"
             )
         }.command(10) { listOf("xournalpp", "-p", "out.pdf", "tmp.xopp") }
             .outputFile("application/pdf", "pdf") { "out.pdf" }
@@ -76,19 +76,26 @@ class Renderer(private val name: String) {
     }
 
     fun output(documentProvider: (RenderMeta) -> RenderedDocument): Renderer {
-        return addStep { it.output = documentProvider(it) }
+        return addStep {
+            it.output = documentProvider(it)
+            buildLog(
+                it,
+                "=> Exporting file with name ${it.output!!.fileName} of type ${it.output!!.contentType} with length ${it.output!!.contentLength}"
+            )
+        }
     }
 
     fun outputFile(mimeType: String, fileExtension: String, filenameProvider: (RenderMeta) -> String): Renderer {
         return output {
-            val filename = filenameProvider(it)
-            logger.trace("serving file ${Paths.get(it.workingDirectory.toString(), filename)}")
+            val filepath = Paths.get(it.workingDirectory.toString(), filenameProvider(it))
+            logger.trace("serving file $filepath")
+            buildLog(
+                it,
+                "=> Exporting file $filepath with name ${it.document.id}.$fileExtension of MIME type $mimeType"
+            )
             RenderedDocument(
-                FileInputStream(Paths.get(it.workingDirectory.toString(), filename).toString()),
-                mimeType,
-                Files.readAttributes(
-                    Paths.get(it.workingDirectory.toString(), filename), BasicFileAttributes::class.java
-                ).size(),
+                FileInputStream(filepath.toString()), mimeType,
+                Files.readAttributes(filepath, BasicFileAttributes::class.java).size(),
                 "${it.document.id}.$fileExtension"
             )
         }
@@ -101,7 +108,12 @@ class Renderer(private val name: String) {
         commandProvider: (RenderMeta) -> List<String>
     ): Renderer {
         return addStep {
-            val pb = ProcessBuilder(commandProvider(it)).redirectErrorStream(true)
+            val command = commandProvider(it)
+            buildLog(
+                it,
+                "=> Executing command $command in directory ${it.workingDirectory} with timeout $timeout $timeUnit"
+            )
+            val pb = ProcessBuilder(command).redirectErrorStream(true)
                 .redirectOutput(
                     ProcessBuilder.Redirect.appendTo(
                         it.fsService.getLogPathFromID(it.document.id).toFile()
@@ -114,7 +126,11 @@ class Renderer(private val name: String) {
                     timeout,
                     timeUnit
                 ) || process.exitValue() != 0
-            ) throw RenderingException(String(it.fsService.readLog(it.document.id)?.readAllBytes() ?: byteArrayOf()))
+            ) {
+                if (process.exitValue() != 0) buildLog(it, "=> Command returned exit code ${process.exitValue()}")
+                else buildLog(it, "=> Command timed out (took longer than $timeout $timeUnit")
+                throw RenderingException(String(it.fsService.readLog(it.document.id)!!.readAllBytes()))
+            }
         }
     }
 
@@ -124,10 +140,14 @@ class Renderer(private val name: String) {
                 it.fsService.getTemporaryDirectory().toString(), "filespider-${it.document.id}-${Date().time}"
             )
             logger.trace("establishing temp dir at $tmpPath")
+            buildLog(it, "=> Initializing temp dir at $tmpPath")
             Files.createDirectories(tmpPath)
             FileSystemUtils.copyRecursively(it.fsService.getDirectoryPathFromID(it.document.id), tmpPath)
             it.workingDirectory = tmpPath
-            it.cleanup.add { FileSystemUtils.deleteRecursively(tmpPath) }
+            it.cleanup.add { meta ->
+                buildLog(meta, "=> cleaning up temp dir $tmpPath")
+                FileSystemUtils.deleteRecursively(tmpPath)
+            }
         }
     }
 
@@ -136,6 +156,7 @@ class Renderer(private val name: String) {
         filenameProvider: (RenderMeta) -> String = { it.fileName }
     ): Renderer {
         return command(1) { meta ->
+            buildLog(meta, "=> replacing ${replacements.size} mappings")
             listOf("sed", "-i", "-E") + replacements.map { listOf("-e", "s/${it.key}/${it.value}/g") }
                 .flatten() + listOf(Paths.get(meta.workingDirectory.toString(), filenameProvider(meta)).toString())
         }
@@ -153,9 +174,12 @@ class Renderer(private val name: String) {
 
     fun copy(srcProvider: (RenderMeta) -> String, dstProvider: (RenderMeta) -> String): Renderer {
         return addStep {
+            val src = srcProvider(it)
+            val dst = dstProvider(it)
+            buildLog(it, "=> copying from $src to $dst")
             Files.copy(
-                Paths.get(it.workingDirectory.toString(), srcProvider(it)),
-                Paths.get(it.workingDirectory.toString(), dstProvider(it))
+                Paths.get(it.workingDirectory.toString(), src),
+                Paths.get(it.workingDirectory.toString(), dst)
             )
         }
     }
@@ -177,8 +201,17 @@ class Renderer(private val name: String) {
     private fun render(meta: RenderMeta): RenderedDocument? {
         logger.debug("Rendering using renderer $name")
         meta.fsService.getLogPathFromID(meta.document.id).toFile().delete()
-        for (step in renderSteps) step(meta)
-        for (step in meta.cleanup) step(meta)
+        buildLog(
+            meta,
+            "==> Starting render using renderer $name of document ${meta.document.id}/${meta.fileName} in ${meta.workingDirectory}"
+        )
+        for ((i, step) in renderSteps.withIndex()) {
+            buildLog(meta, "==> Executing step $i/${renderSteps.size}")
+            step(meta)
+        }
+        for (step in meta.cleanup) {
+            step(meta)
+        }
         return meta.output!!
     }
 
@@ -190,4 +223,10 @@ class Renderer(private val name: String) {
         var output: RenderedDocument? = null,
         val cleanup: MutableList<(RenderMeta) -> Unit> = mutableListOf(),
     )
+
+    private fun buildLog(meta: RenderMeta, s: String, end: String = "\n") {
+        val writer = FileWriter(meta.fsService.getLogPathFromID(meta.document.id).toFile(), true)
+        writer.append(s + end)
+        writer.close()
+    }
 }

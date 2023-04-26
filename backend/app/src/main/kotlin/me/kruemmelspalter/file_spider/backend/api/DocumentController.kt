@@ -66,6 +66,15 @@ class DocumentController {
         return uuid.toString()
     }
 
+    @PostMapping("/import", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun importPdfToXopp(
+        @RequestParam file: MultipartFile,
+        @RequestParam title: String,
+        @RequestParam tags: List<String>,
+    ): String {
+        return documentService.importPdfToXopp(file.inputStream, title, tags).toString()
+    }
+
     @GetMapping("/{id}")
     fun getDocumentMeta(@PathVariable("id") documentId: UUID): DocumentMeta {
         return documentService.getDocumentMeta(documentId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
@@ -118,7 +127,11 @@ class DocumentController {
         return ResponseEntity
             .ok()
             .contentType(MediaType.TEXT_PLAIN)
-            .body(InputStreamResource(documentService.readDocumentLog(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)))
+            .body(
+                InputStreamResource(
+                    documentService.readDocumentLog(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+                )
+            )
     }
 
     @ExceptionHandler(value = [RenderingException::class])

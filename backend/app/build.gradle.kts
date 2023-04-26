@@ -48,6 +48,8 @@ dependencies {
     implementation("com.typesafe:config:1.4.2")
 
     implementation("com.fasterxml.uuid:java-uuid-generator:3.1.5")
+
+    implementation("org.apache.pdfbox:pdfbox:2.0.28")
 }
 
 application {

@@ -104,6 +104,12 @@ class FileSystemService {
         return resource
     }
 
+    fun writeCustomFileToDocument(id: UUID, fileName: String, stream: InputStream) {
+        val outStream = FileOutputStream(Paths.get(getDirectoryPathFromID(id).toString(), fileName).toFile())
+        stream.transferTo(outStream)
+        outStream.close()
+    }
+
     final fun getCacheDirectory(): Path {
         return Paths.get(documentDirectory.toString(), "cache")
     }

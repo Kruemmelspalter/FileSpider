@@ -4,41 +4,82 @@
     width="500"
   >
     <v-card>
-      <v-card-title>Add Document</v-card-title>
-      <v-form ref="creationForm" class="px-5 pb-3" @submit.prevent="createDocument">
-        <v-text-field v-model="creationMeta.title" :rules="[v=>!!v||'Title is required']" autofocus label="Title" />
-        <v-combobox
-          v-model="creationMeta.tags"
-          :items="$store.getters.tags"
-          :rules="[v => v.length !== 0||'At least one tag is required']"
-          chips
-          label="Tags"
-          multiple
-        />
-        <v-file-input
-          v-model="creationMeta.file"
-          :rules="[v=>!!v||!!creationMeta.mime||'Either file or mime type is required']"
-          chips
-          counter
-          label="File (optional)"
-          show-size
-        />
-        <v-text-field
-          v-model="creationMeta.mime"
-          :rules="[
-            v => v !== null || creationMeta.file !== null || 'Either file or mime type is required',
-            v => v === null || v.length <= 0 || /^[-a-z]+\/[-a-z]+(?:\+[-a-z]+)?$/.test(v) || 'Invalid mime type',
-          ]"
-          label="MIME Type (auto by default)"
-        />
-        <v-text-field v-model="creationMeta.renderer" label="Renderer (mime specific by default)" />
-        <v-text-field v-model="creationMeta.editor" label="Editor (mime specific by default)" />
-        <v-text-field v-model="creationMeta.fileExtension" label="File Extension (auto from file name by default)" />
-        <v-btn type="submit">
-          Submit
-        </v-btn>
-        <v-select v-model="presetChoice" :items="presets" label="Preset" />
-      </v-form>
+      <v-tabs v-model="tab" class="mb-8">
+        <v-tab value="create">
+          Create Document
+        </v-tab>
+        <v-tab value="import">
+          Import PDF to XOPP
+        </v-tab>
+      </v-tabs>
+      <v-card-text>
+        <div v-if="tab===0">
+          <v-form ref="creationForm" class="px-5 pb-3" @submit.prevent="createDocument">
+            <v-text-field v-model="creationMeta.title" :rules="[v=>!!v||'Title is required']" autofocus label="Title" />
+            <v-combobox
+              v-model="creationMeta.tags"
+              :items="$store.getters.tags"
+              :rules="[v => v.length !== 0||'At least one tag is required']"
+              chips
+              label="Tags"
+              multiple
+            />
+            <v-file-input
+              v-model="creationMeta.file"
+              :rules="[v=>!!v||!!creationMeta.mime||'Either file or mime type is required']"
+              chips
+              counter
+              label="File (optional)"
+              show-size
+            />
+            <v-text-field
+              v-model="creationMeta.mime"
+              :rules="[
+                v => v !== null || creationMeta.file !== null || 'Either file or mime type is required',
+                v => v === null || v.length <= 0 || /^[-a-z]+\/[-a-z]+(?:\+[-a-z]+)?$/.test(v) || 'Invalid mime type',
+              ]"
+              label="MIME Type (auto by default)"
+            />
+            <v-text-field v-model="creationMeta.renderer" label="Renderer (mime specific by default)" />
+            <v-text-field v-model="creationMeta.editor" label="Editor (mime specific by default)" />
+            <v-text-field v-model="creationMeta.fileExtension" label="File Extension (auto from file name by default)" />
+            <v-btn type="submit">
+              Submit
+            </v-btn>
+            <v-select v-model="presetChoice" :items="presets" label="Preset" />
+          </v-form>
+        </div>
+        <div v-if="tab===1">
+          <v-form ref="importForm" class="px-5 pb-3" @submit.prevent="importPDF">
+            <v-text-field
+              v-model="creationMeta.title"
+              :rules="[v=>!!v||'Title is required']"
+              autofocus
+              label="Title"
+            />
+            <v-combobox
+              v-model="creationMeta.tags"
+              :items="$store.getters.tags"
+              :rules="[v => v.length !== 0||'At least one tag is required']"
+              chips
+              label="Tags"
+              multiple
+            />
+            <v-file-input
+              v-model="creationMeta.file"
+              :rules="[v=>!!v||'File is required']"
+              accept="application/pdf"
+              chips
+              counter
+              label="File (optional)"
+              show-size
+            />
+            <v-btn type="submit">
+              Submit
+            </v-btn>
+          </v-form>
+        </div>
+      </v-card-text>
     </v-card>
   </v-dialog>
 </template>
@@ -64,6 +105,7 @@ export default {
         fileExtension: null,
       },
       presetChoice: null,
+      tab: 'create',
       presets: [
         { text: 'Markdown', value: { mime: 'text/markdown', fileExtension: 'md', renderer: 'markdown', editor: 'plain' } },
         {
@@ -138,6 +180,21 @@ export default {
         editor: this.creationMeta.editor || 'mime',
         file: this.creationMeta.file,
         fileExtension: this.creationMeta.fileExtension || this.creationMeta.file?.name?.split('.')?.at(-1) || null,
+      })
+        .then((newId) => {
+          this.$router.push(newId)
+          this.visible = false
+          this.$refs.creationForm.reset()
+        })
+    },
+    importPDF () {
+      if (!this.$refs.importForm.validate()) {
+        return
+      }
+      this.$store.dispatch('importPDF', {
+        title: this.creationMeta.title,
+        tags: this.creationMeta.tags,
+        file: this.creationMeta.file,
       })
         .then((newId) => {
           this.$router.push(newId)

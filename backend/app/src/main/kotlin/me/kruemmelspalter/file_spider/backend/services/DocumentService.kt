@@ -80,8 +80,8 @@ class DocumentService {
         documentRepository.createDocument(
             uuid,
             title ?: "Untitled",
-            renderer ?: "plain",
-            editor ?: "text",
+            renderer ?: "mime",
+            editor ?: "mime",
             mimeType,
             tags ?: listOf(),
             fileExtension,

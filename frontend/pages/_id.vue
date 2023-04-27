@@ -149,7 +149,11 @@ export default {
     return {
       darkMode: true,
       search: JSON.parse(localStorage.getItem('searchTerm') || '[]'),
-      time: null,
+      time: Intl.DateTimeFormat(navigator.language, {
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+      }).format(),
       interval: null,
       searchTimeout: null,
       showSearchError: false,

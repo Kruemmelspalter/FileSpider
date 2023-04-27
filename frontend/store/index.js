@@ -75,4 +75,16 @@ export const actions = {
     await dispatch('fetchDocument', response.data)
     return response.data
   },
+  async importPDF ({ dispatch, state }, { title, tags, file }) {
+    const formData = new FormData()
+    formData.append('title', title)
+    formData.append('tags', tags.join(','))
+    formData.append('file', file)
+
+    const response = await this.$axios.post(`${state.apiSource}/document/import`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    await dispatch('fetchDocument', response.data)
+    return response.data
+  },
 }

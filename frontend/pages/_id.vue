@@ -57,6 +57,9 @@
             </v-btn>
           </v-col>
           <v-col class="justify-end" style="display: flex">
+            <v-btn icon @click="toggleDocFullscreen">
+              <v-icon>{{ docFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}</v-icon>
+            </v-btn>
             <v-btn icon @click="showDocumentCreationDialog">
               <v-icon>mdi-file-document-plus</v-icon>
             </v-btn>
@@ -125,6 +128,7 @@
         v-if="displayingDocument"
         ref="documentDisplay"
         :document-invert="documentInvert"
+        :fullscreen="docFullscreen"
         :search="commitSearch"
       />
     </v-main>
@@ -160,6 +164,7 @@ export default {
       documentInvert: false,
       showDeleteConfirmation: false,
       showSidebar: true,
+      docFullscreen: false,
     }
   },
   computed: {
@@ -239,6 +244,9 @@ export default {
         .then(() => {
           this.$router.push('/index')
         })
+    },
+    toggleDocFullscreen () {
+      this.docFullscreen = !this.docFullscreen
     },
   },
 }

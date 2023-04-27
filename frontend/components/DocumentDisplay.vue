@@ -1,11 +1,11 @@
 <template>
-  <v-card>
-    <v-card-title>
+  <v-card style="height: 97%">
+    <v-card-title v-if="!fullscreen">
       <v-form style="width: 100%" @submit.prevent="changeTitle(documentTitle)">
         <v-text-field v-model="documentTitle" dense full-width />
       </v-form>
     </v-card-title>
-    <v-card-subtitle>
+    <v-card-subtitle v-if="!fullscreen">
       <span style="user-select: none" @click="copyIdToClipboard" v-text="documentID" />
       <v-snackbar v-model="showIdCopySnackbar">
         Copied to clipboard
@@ -57,7 +57,7 @@
         </v-dialog>
       </v-chip-group>
     </v-card-subtitle>
-    <v-card-text>
+    <v-card-text :style="fullscreen ? {height: '100%'} : {}">
       <iframe
         v-show="iframeState === 1"
         id="document-content"
@@ -92,6 +92,10 @@ export default {
     search: {
       type: Function,
       required: true,
+    },
+    fullscreen: {
+      type: Boolean,
+      default: () => false,
     },
   },
   data () {

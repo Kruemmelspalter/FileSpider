@@ -1,7 +1,9 @@
-use uuid::Uuid;
+use uuid::{uuid, Uuid};
 use wasm_bindgen::prelude::*;
 use yew::prelude::*;
 use yew_router::prelude::*;
+
+use crate::document::DocumentViewer;
 
 #[wasm_bindgen]
 extern "C" {
@@ -24,20 +26,20 @@ enum Route {
 pub fn app() -> Html {
     html! {
         <BrowserRouter>
-            <Switch<Route> render={switch} />
+            <Switch<Route> render={|route| match route {
+                Route::Home => home(),
+                Route::Document { id } => html! { <DocumentViewer id={id}/>},
+                Route::NotFound => html! {<h1>{ "Not Found!" }</h1>},
+            }} />
         </BrowserRouter>
     }
 }
 
-fn switch(route: Route) -> Html {
-    match route {
-        Route::Home => home(),
-        Route::Document { id } => crate::document::document(id),
-        Route::NotFound => html! {<h1>{ "Not Found!" }</h1>},
-    }
-}
 fn home() -> Html {
     html! {
+    <>
         {"home"}
+        <Link<Route> to={Route::Document { id: uuid!("73426d5b-1ead-4670-b13e-aa3c5358fc92")}}>{ "doucmen" }</Link<Route>>
+    </>
     }
 }

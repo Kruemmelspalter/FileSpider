@@ -10,13 +10,13 @@ port = 1420
 open = false
 
 [[hooks]]
-stage = "build"
+stage = "pre_build"
 command = "npx"
 command_arguments = [
     "tailwindcss",
     "-i",
-    "input.css",
+    "public/input.css",
     "-o",
-    "tailwind.css",
+    "public/tailwind.css",
     "--minify",
 ]

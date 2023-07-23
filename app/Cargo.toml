@@ -1,5 +1,5 @@
 [package]
-name = "filespider-ui"
+name = "filespider"
 version = "0.0.0"
 edition = "2021"
 
@@ -16,4 +16,10 @@ yew-router = "0.17.0"
 uuid = "1.4.0"
 
 [workspace]
-members = ["src-tauri"]
+members = ["src-tauri", "common"]
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev]
+opt-level = 1

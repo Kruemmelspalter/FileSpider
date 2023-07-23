@@ -11,6 +11,10 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
+pub async fn invoke_document(cmd: &str, args: JsValue) -> JsValue {
+    invoke(&format!("plugin:document|{}", cmd), args).await
+}
+
 #[derive(Clone, Routable, PartialEq)]
 enum Route {
     #[at("/")]

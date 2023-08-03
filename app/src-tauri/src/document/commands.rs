@@ -18,10 +18,19 @@ pub async fn search(
     pos_filter: Vec<String>,
     neg_filter: Vec<String>,
     crib: String,
-) -> Result<Vec<Uuid>, String> {
-    document::search(&*state.pool.lock().await, pos_filter, neg_filter, crib)
-        .await
-        .map_err(|x| x.to_string())
+    page: u32,
+    page_length: u32,
+) -> Result<Vec<Meta>, String> {
+    document::search(
+        &*state.pool.lock().await,
+        pos_filter,
+        neg_filter,
+        crib,
+        page,
+        page_length,
+    )
+    .await
+    .map_err(|x| x.to_string())
 }
 
 #[tauri::command]

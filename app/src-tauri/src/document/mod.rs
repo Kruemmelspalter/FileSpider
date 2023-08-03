@@ -1,5 +1,6 @@
 pub mod commands;
 pub use commands::plugin;
+pub mod render;
 
 use chrono::{DateTime, FixedOffset, NaiveDateTime};
 use eyre::eyre;
@@ -16,7 +17,7 @@ use tokio::process::Command;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
-use crate::{directories::get_filespider_directory, FilespiderState};
+use crate::directories::get_filespider_directory;
 
 async fn document_exists(id: Uuid) -> Result<()> {
     let path = format!("{}/{}/{}", get_filespider_directory()?, id, id);
@@ -31,13 +32,16 @@ pub async fn search(
     pos_filter: Vec<String>,
     neg_filter: Vec<String>,
     crib: String,
-) -> Result<Vec<Uuid>> {
+    page: u32,
+    page_length: u32,
+) -> Result<Vec<Meta>> {
     let query_str = format!(
-        "select id from Document left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as posTags on posTags.document = Document.id left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as negTags on negTags.document = document.id where {} and (negTags.tagCount = 0 or negTags.tagCount is null) and document.title like '%' || ? || '%'",
+        "select id from Document left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as posTags on posTags.document = Document.id left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as negTags on negTags.document = document.id where {} and (negTags.tagCount = 0 or negTags.tagCount is null) and document.title like '%' || ? || '%' limit ? offset ?",
         if pos_filter.len() == 0 {"()".to_string()} else {format!("(?{})",", ?".repeat(pos_filter.len()-1))},
         if neg_filter.len() == 0 {"()".to_string()} else {format!("(?{})",", ?".repeat(neg_filter.len()-1))},
         if pos_filter.len() == 0 {"(posTags.tagCount = ? or posTags.tagCount is null)"} else {"posTags.tagCount = ?"}
     );
+
     let mut query = sqlx::query(&query_str);
 
     for pos_tag in pos_filter.iter() {
@@ -47,12 +51,16 @@ pub async fn search(
         query = query.bind(neg_tag);
     }
 
-    Ok(query
+    query = query.bind(page_length).bind((page - 1) * page_length);
+
+    let docs = query
         .bind(pos_filter.len() as u32)
         .bind(crib)
         .map(|x| x.get("id"))
         .fetch_all(pool)
-        .await?)
+        .await?;
+
+    todo!()
 }
 
 pub async fn create(
@@ -137,6 +145,7 @@ pub async fn render(
     id: Uuid,
 ) -> Result<Render> {
     document_exists(id).await?;
+    let meta = get_meta(pool, id).await?;
 
     todo!()
 }

@@ -1,23 +1,25 @@
-pub mod commands;
-pub use commands::plugin;
-pub mod render;
-
-use chrono::{DateTime, FixedOffset, NaiveDateTime};
+use crate::directories::get_filespider_directory;
+use crate::types::DocType;
+use crate::types::Meta;
+use crate::types::MetaPatch;
+use crate::types::RenderType;
+use chrono::NaiveDateTime;
 use eyre::eyre;
 use eyre::Result;
-use filespider_common::{DocType, Meta, MetaPatch, Render};
 use mac_address::get_mac_address;
 use sqlx::query;
 use sqlx::Row;
 use sqlx::SqlitePool;
 use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::str::FromStr;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 use tokio::process;
 use tokio::process::Command;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
-use crate::directories::get_filespider_directory;
+pub mod commands;
 
 async fn document_exists(id: Uuid) -> Result<()> {
     let path = format!("{}/{}/{}", get_filespider_directory()?, id, id);
@@ -26,7 +28,6 @@ async fn document_exists(id: Uuid) -> Result<()> {
         false => Ok(()),
     }
 }
-
 pub async fn search(
     pool: &SqlitePool,
     pos_filter: Vec<String>,
@@ -37,9 +38,9 @@ pub async fn search(
 ) -> Result<Vec<Meta>> {
     let query_str = format!(
         "select id from Document left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as posTags on posTags.document = Document.id left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as negTags on negTags.document = document.id where {} and (negTags.tagCount = 0 or negTags.tagCount is null) and document.title like '%' || ? || '%' limit ? offset ?",
-        if pos_filter.len() == 0 {"()".to_string()} else {format!("(?{})",", ?".repeat(pos_filter.len()-1))},
-        if neg_filter.len() == 0 {"()".to_string()} else {format!("(?{})",", ?".repeat(neg_filter.len()-1))},
-        if pos_filter.len() == 0 {"(posTags.tagCount = ? or posTags.tagCount is null)"} else {"posTags.tagCount = ?"}
+        if pos_filter.is_empty() {"()".to_string()} else {format!("(?{})",", ?".repeat(pos_filter.len()-1))},
+        if neg_filter.is_empty() {"()".to_string()} else {format!("(?{})",", ?".repeat(neg_filter.len()-1))},
+        if pos_filter.is_empty() {"(posTags.tagCount = ? or posTags.tagCount is null)"} else {"posTags.tagCount = ?"}
     );
 
     let mut query = sqlx::query(&query_str);
@@ -53,14 +54,17 @@ pub async fn search(
 
     query = query.bind(page_length).bind((page - 1) * page_length);
 
-    let docs = query
+    let docs: Vec<Uuid> = query
         .bind(pos_filter.len() as u32)
         .bind(crib)
         .map(|x| x.get("id"))
         .fetch_all(pool)
         .await?;
 
-    todo!()
+    futures::future::join_all(docs.into_iter().map(|id| get_meta(pool, id)))
+        .await
+        .into_iter()
+        .collect()
 }
 
 pub async fn create(
@@ -91,7 +95,7 @@ pub async fn create(
     }?;
 
     let doc_type_str = doc_type.unwrap_or(DocType::Plain).to_string();
-    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as u32;
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u32;
     query!(
         "insert into Document (id, title, type, added) values (?, ?, ?, ?)",
         id,
@@ -124,30 +128,21 @@ pub async fn get_meta(pool: &SqlitePool, id: Uuid) -> Result<Meta> {
 
     Ok(Meta {
         title: doc_res.title,
-        doc_type: DocType::from_string(doc_res.r#type)?,
+        doc_type: DocType::from_str(&doc_res.r#type)?,
         tags,
-        created: DateTime::from_local(
-            NaiveDateTime::from_timestamp_opt(doc_res.added, 0)
-                .unwrap_or(NaiveDateTime::from_timestamp_opt(0, 0).unwrap()),
-            FixedOffset::east_opt(0).unwrap(),
-        ),
-        accessed: tokio::fs::metadata(format!("{}/{}/{}", get_filespider_directory()?, id, id))
-            .await?
-            .accessed()?
-            .into(),
+        created: NaiveDateTime::from_timestamp_millis(doc_res.added).unwrap(),
+        accessed: NaiveDateTime::from_timestamp_millis(
+            tokio::fs::metadata(format!("{}/{}/{}", get_filespider_directory()?, id, id))
+                .await?
+                .accessed()?
+                .duration_since(UNIX_EPOCH)?
+                .as_millis()
+                .try_into()
+                .unwrap(),
+        )
+        .unwrap(),
         id,
     })
-}
-
-pub async fn render(
-    pool: &SqlitePool,
-    renderers: &mut HashMap<Uuid, JoinHandle<()>>,
-    id: Uuid,
-) -> Result<Render> {
-    document_exists(id).await?;
-    let meta = get_meta(pool, id).await?;
-
-    todo!()
 }
 
 /// returns Ok(false) if editor is already running, if editor got spawned it returns Ok(true)
@@ -178,11 +173,11 @@ pub async fn open_editor(
     Ok(true)
 }
 
-pub async fn alter_meta(pool: &SqlitePool, id: Uuid, patch: MetaPatch) -> Result<()> {
+pub async fn patch_meta(pool: &SqlitePool, id: Uuid, patch: MetaPatch) -> Result<()> {
     document_exists(id).await?;
 
     match patch {
-        MetaPatch::Title(title) => {
+        MetaPatch::ChangeTitle(title) => {
             match query!("update Document set title = ? where id = ?", title, id)
                 .execute(pool)
                 .await?
@@ -199,7 +194,8 @@ pub async fn alter_meta(pool: &SqlitePool, id: Uuid, patch: MetaPatch) -> Result
                 .rows_affected()
             {
                 0 => Err(eyre!("document already has tag")),
-                _ => Ok(()),
+                1 => Ok(()),
+                _ => panic!(),
             }
         }
         MetaPatch::RemoveTag(tag) => {
@@ -209,7 +205,8 @@ pub async fn alter_meta(pool: &SqlitePool, id: Uuid, patch: MetaPatch) -> Result
                 .rows_affected()
             {
                 1 => Ok(()),
-                _ => Err(eyre!("failed to delete tag")),
+                0 => Err(eyre!("failed to delete tag")),
+                _ => panic!(),
             }
         }
     }
@@ -244,4 +241,15 @@ pub async fn get_tags(pool: &SqlitePool, crib: String) -> Result<Vec<String>> {
     .map(|x| x.tag)
     .fetch_all(pool)
     .await?)
+}
+
+pub async fn render(
+    pool: &SqlitePool,
+    renderers: &mut HashMap<Uuid, JoinHandle<()>>,
+    id: Uuid,
+) -> Result<RenderType> {
+    document_exists(id).await?;
+    let meta = get_meta(pool, id).await?;
+
+    todo!()
 }

@@ -1,7 +1,6 @@
 use std::fs;
 
 use std::str::FromStr;
-use tokio::sync::Mutex;
 
 use eyre::Result;
 use sqlx::sqlite::SqliteConnectOptions;
@@ -9,7 +8,7 @@ use sqlx::SqlitePool;
 
 use crate::directories::get_filespider_directory;
 
-pub async fn init() -> Result<Mutex<SqlitePool>> {
+pub async fn init() -> Result<SqlitePool> {
     fs::create_dir_all(get_filespider_directory()?)?;
 
     let db_path = format!("{}/filespider.sqlite", get_filespider_directory()?);
@@ -20,5 +19,5 @@ pub async fn init() -> Result<Mutex<SqlitePool>> {
 
     sqlx::migrate!().run(&pool).await?;
 
-    Ok(Mutex::new(pool))
+    Ok(pool)
 }

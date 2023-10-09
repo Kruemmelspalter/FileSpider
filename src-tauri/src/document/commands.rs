@@ -1,5 +1,5 @@
+use crate::types::{DocType, Meta, MetaPatch, RenderType};
 use eyre::Result;
-use filespider_common::{DocType, Meta, MetaPatch, Render};
 
 use tauri::State;
 
@@ -54,7 +54,7 @@ pub async fn get_meta(state: State<'_, FilespiderState>, id: Uuid) -> Result<Met
 }
 
 #[tauri::command]
-pub async fn render(state: State<'_, FilespiderState>, id: Uuid) -> Result<Render, String> {
+pub async fn render(state: State<'_, FilespiderState>, id: Uuid) -> Result<RenderType, String> {
     document::render(
         &*state.pool.lock().await,
         &mut *state.renderers.lock().await,
@@ -82,7 +82,7 @@ pub async fn alter_meta(
     id: Uuid,
     patch: MetaPatch,
 ) -> Result<(), String> {
-    document::alter_meta(&*state.pool.lock().await, id, patch)
+    document::patch_meta(&*state.pool.lock().await, id, patch)
         .await
         .map_err(|x| x.to_string())
 }

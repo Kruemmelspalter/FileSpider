@@ -1,15 +1,41 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+use eyre::Result;
+use sqlx::SqlitePool;
+use std::collections::HashMap;
+use tauri::api::path::document_dir;
+use tokio::{process, sync::Mutex, task::JoinHandle};
+use uuid::Uuid;
+
+mod db;
+mod directories;
+mod document;
+mod types;
+
+pub struct FilespiderState {
+    pool: Mutex<SqlitePool>,
+    editors: Mutex<HashMap<Uuid, process::Child>>,
+    renderers: Mutex<HashMap<Uuid, JoinHandle<()>>>,
 }
 
-fn main() {
+impl FilespiderState {
+    fn new(pool: SqlitePool) -> Self {
+        Self {
+            pool: Mutex::new(pool),
+            editors: Mutex::new(HashMap::new()),
+            renderers: Mutex::new(HashMap::new()),
+        }
+    }
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet])
+        .manage(FilespiderState::new(db::init().await?))
+        .plugin(document::commands::plugin())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+
+    Ok(())
 }

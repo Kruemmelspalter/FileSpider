@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "select title, type, added from Document where id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "title",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "type",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "added",
+        "ordinal": 2,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ba968b7ae02ab375b25fc1c05e879ab98b7fdedf3200bcdf2b3a9475bce58556"
+}

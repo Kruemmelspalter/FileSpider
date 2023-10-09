@@ -18,6 +18,13 @@ pub fn get_filespider_directory() -> Result<String> {
     )))
 }
 
+pub async fn create_directory() -> Result<()> {
+    if !tokio::fs::try_exists(get_filespider_directory()?).await? {
+        tokio::fs::create_dir_all(get_filespider_directory()?).await?;
+    }
+    Ok(())
+}
+
 #[cfg(target_os = "windows")]
 pub fn get_filespider_directory() -> Result<String> {
     Ok(std::env::var("FILESPIDER_DATA_PATH").unwrap_or("%APPDATA%/filespider".to_string()))

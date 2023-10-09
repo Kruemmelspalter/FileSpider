@@ -4,7 +4,6 @@
 use eyre::Result;
 use sqlx::SqlitePool;
 use std::collections::HashMap;
-use tauri::api::path::document_dir;
 use tokio::{process, sync::Mutex, task::JoinHandle};
 use uuid::Uuid;
 
@@ -31,8 +30,13 @@ impl FilespiderState {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    directories::create_directory().await?;
+
+    let pool = db::init().await?;
+    sqlx::migrate!().run(&pool).await?;
+
     tauri::Builder::default()
-        .manage(FilespiderState::new(db::init().await?))
+        .manage(FilespiderState::new(pool))
         .plugin(document::commands::plugin())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

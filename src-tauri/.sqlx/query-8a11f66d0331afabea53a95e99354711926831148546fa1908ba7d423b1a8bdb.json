@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "select tag from Tag where document = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "tag",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8a11f66d0331afabea53a95e99354711926831148546fa1908ba7d423b1a8bdb"
+}

@@ -13,7 +13,7 @@ jobs:
       - uses: hecrj/setup-rust-action@v2
         with:
           rust-version: ${{ matrix.rust }}
-      - run: cargo install cargo-tauri
+      - run: cargo install tauri-cli
       - run: cargo tauri build
       - uses: actions/upload-artifact@v3
         with:

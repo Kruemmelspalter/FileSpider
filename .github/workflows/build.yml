@@ -14,6 +14,7 @@ jobs:
         with:
           rust-version: ${{ matrix.rust }}
       - run: cargo install tauri-cli
+      - run: yarn install
       - run: cargo tauri build
       - uses: actions/upload-artifact@v3
         with:

@@ -22,12 +22,17 @@ jobs:
             ~/.cargo/git/db/
             src-tauri/target/
           key: rust-${{ runner.os }}-$(rustc --version 2>&1|sed -E 's/^rustc [[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+ \(([[:digit:][:lower:]]+) [[:digit:]]+-[[:digit:]]+-[[:digit:]]+\)$/\1/')-${{ hashFiles('**/Cargo.lock') }}
-      - run: sudo apt-get update && sudo apt-get install libgtk-3-dev libsoup2.4-dev
-      - run: cargo install tauri-cli
+      - uses: actions/cache@v3
+        with:
+          path: |
+            $(yarn cache dir)
+          key: yarn-${{ runner.os }}-${{ hashFiles('**/yarn.lock')}}
+      - run: sudo apt update && sudo apt install libwebkit2gtk-4.0-dev build-essential curl wget file libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+      - run: if [ ! -e ~/.cargo/bin/cargo-tauri ]; then cargo install tauri-cli; fi
       - run: yarn install
       - run: cargo tauri build
       - uses: actions/upload-artifact@v3
         with:
           path: |
-            src-tauri/target/release/filespider-*.deb
-            src-tauri/target/release/filespider-*.appimage
+            src-tauri/target/release/bundle/deb/filespider-*.deb
+            src-tauri/target/release/bundle/appimage/filespider-*.appimage

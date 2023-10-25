@@ -13,5 +13,6 @@ create table if not exists Tag (
 
 create table if not exists Cache (
     document char(36) primary key,
-    hash binary(16) not null
+    hash binary(16) not null,
+    render_type varchar(16) default 'plain' not null
 );

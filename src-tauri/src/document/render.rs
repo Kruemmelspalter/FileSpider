@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     hash::Hasher,
     path::{Path, PathBuf},
+    str::FromStr,
     time::UNIX_EPOCH,
 };
 
@@ -59,27 +60,37 @@ pub async fn render(
 ) -> Result<(String, RenderType)> {
     document::document_exists(id).await?;
     let hash = hash_document_files(id).await?;
+    let hex_hash = format!("{:128x}", hash);
 
     if let Some(handle) = renderers.get(&(id, hash)) {
         if !handle.lock().await.is_finished() {
             panic!("weird things happening: original renderer is not being awaited");
         }
-        todo!(); // get from cache
+        return get_from_cache(
+            id,
+            query!(
+                "select render_type from Cache where document = ? and hash = unhex(?)",
+                id,
+                hex_hash
+            )
+            .map(|r| RenderType::from_str(r.render_type.as_str()))
+            .fetch_one(pool)
+            .await??,
+        );
     }
 
     // check cache
-    let hex_hash = format!("{:128x}", hash);
 
-    if query!(
-        "select document from Cache where document = ? and hash = unhex(?)",
+    if let Some(render_type) = query!(
+        "select render_type from Cache where document = ? and hash = unhex(?)",
         id,
         hex_hash
     )
-    .map(|x| x.document.is_some())
-    .fetch_one(pool)
+    .map(|r| r.render_type)
+    .fetch_optional(pool)
     .await?
     {
-        todo!(); // get from cache
+        return get_from_cache(id, RenderType::from_str(render_type.as_str())?);
     }
 
     let meta = document::get_meta(pool, id).await?;
@@ -99,7 +110,21 @@ pub async fn render(
 
     drop(handle_ref);
 
-    todo!() // return from cache
+    get_from_cache(
+        id,
+        query!(
+            "select render_type from Cache where document = ? and hash = unhex(?)",
+            id,
+            hex_hash
+        )
+        .map(|r| RenderType::from_str(r.render_type.as_str()))
+        .fetch_one(pool)
+        .await??,
+    )
+}
+
+fn get_from_cache(id: Uuid, render_type: RenderType) -> Result<(String, RenderType)> {
+    Ok((get_cache_file(id)?, render_type))
 }
 
 async fn render_task(meta: Meta, hash: Hash, mut connection: SqliteConnection) {
@@ -110,7 +135,7 @@ async fn render_task(meta: Meta, hash: Hash, mut connection: SqliteConnection) {
             tokio::fs::write(get_cache_file(meta.id).unwrap(), e.to_string())
                 .await
                 .unwrap();
-            insert_into_cache(&mut connection, meta.id, hash)
+            insert_into_cache(&mut connection, meta.id, hash, RenderType::Plain)
                 .await
                 .unwrap()
         }
@@ -121,13 +146,18 @@ async fn insert_into_cache<'a>(
     connection: &mut SqliteConnection,
     id: Uuid,
     hash: Hash,
+    render_type: RenderType,
 ) -> Result<()> {
     let hex_hash = format!("{:128x}", hash);
+    let render_str = render_type.to_string();
+
     query!(
-        "insert into Cache (document, hash) values (?, unhex(?)) on conflict(document) do update set hash = unhex(?)",
+        "insert into Cache (document, hash, render_type) values (?, unhex(?), ?) on conflict(document) do update set hash = unhex(?), render_type = ?",
         id,
         hex_hash,
-        hex_hash
+        render_str,
+        hex_hash,
+        render_str
     )
     .execute(connection).await?;
     Ok(())
@@ -138,9 +168,10 @@ async fn copy_into_cache<'a>(
     id: Uuid,
     hash: Hash,
     path: impl AsRef<Path>,
+    render_type: RenderType,
 ) -> Result<()> {
     tokio::fs::copy(path, get_cache_file(id)?).await?;
-    insert_into_cache(connection, id, hash).await?;
+    insert_into_cache(connection, id, hash, render_type).await?;
     Ok(())
 }
 
@@ -163,7 +194,14 @@ struct PlainRenderer;
 #[async_trait]
 impl Renderer for PlainRenderer {
     async fn render(&self, id: Uuid, hash: Hash, connection: &mut SqliteConnection) -> Result<()> {
-        copy_into_cache(connection, id, hash, get_document_file(id)?).await?;
+        copy_into_cache(
+            connection,
+            id,
+            hash,
+            get_document_file(id)?,
+            RenderType::Plain,
+        )
+        .await?;
         Ok(())
     }
 }
@@ -191,7 +229,14 @@ impl Renderer for MarkdownRenderer {
             return Err(eyre!("pandoc failed"));
         }
 
-        copy_into_cache(connection, id, hash, temppath.join("out.html")).await?;
+        copy_into_cache(
+            connection,
+            id,
+            hash,
+            temppath.join("out.html"),
+            RenderType::Html,
+        )
+        .await?;
 
         drop(tempdir);
 
@@ -233,7 +278,14 @@ impl Renderer for LaTeXRenderer {
             return Err(eyre!("render latex failed"));
         }
 
-        copy_into_cache(connection, id, hash, temppath.join("in.pdf")).await?;
+        copy_into_cache(
+            connection,
+            id,
+            hash,
+            temppath.join("in.pdf"),
+            RenderType::Pdf,
+        )
+        .await?;
 
         drop(tempdir);
 
@@ -276,7 +328,14 @@ impl Renderer for XournalPPRenderer {
             return Err(eyre!("xopp export failed"));
         }
 
-        copy_into_cache(connection, id, hash, temppath.join("out.pdf")).await?;
+        copy_into_cache(
+            connection,
+            id,
+            hash,
+            temppath.join("out.pdf"),
+            RenderType::Pdf,
+        )
+        .await?;
 
         Ok(())
     }

@@ -37,6 +37,29 @@ pub enum DocType {
     LaTeX,
 }
 
+impl FromStr for RenderType {
+    type Err = eyre::Report;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "plain" => Ok(RenderType::Plain),
+            "html" => Ok(RenderType::Html),
+            "pdf" => Ok(RenderType::Pdf),
+            _ => Err(eyre!("unknown render type {}", s)),
+        }
+    }
+}
+
+impl ToString for RenderType {
+    fn to_string(&self) -> String {
+        match self {
+            RenderType::Plain => "plain".to_string(),
+            RenderType::Html => "html".to_string(),
+            RenderType::Pdf => "pdf".to_string(),
+        }
+    }
+}
+
 impl FromStr for DocType {
     type Err = eyre::Report;
 

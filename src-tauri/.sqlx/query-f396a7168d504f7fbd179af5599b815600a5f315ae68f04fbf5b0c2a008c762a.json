@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "select render_type from Cache where document = ? and hash = unhex(?)",
+  "describe": {
+    "columns": [
+      {
+        "name": "render_type",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f396a7168d504f7fbd179af5599b815600a5f315ae68f04fbf5b0c2a008c762a"
+}

@@ -2,6 +2,8 @@ with import <nixpkgs> { };
 mkShell {
   nativeBuildInputs = with pkgs; [
     rustup
+    cargo-tauri
+    
     pkg-config
     dbus
     openssl
@@ -17,6 +19,8 @@ mkShell {
     sqlite-interactive
     nixfmt
     wget
+
+    vscodium
 
     xournalpp
     calibre

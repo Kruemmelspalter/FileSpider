@@ -15,7 +15,7 @@ mod types;
 pub struct FilespiderState {
     pool: Mutex<SqlitePool>,
     editors: Mutex<HashMap<Uuid, process::Child>>,
-    renderers: Mutex<HashMap<Uuid, JoinHandle<()>>>,
+    renderers: Mutex<HashMap<(Uuid, document::render::Hash), Mutex<JoinHandle<()>>>>,
 }
 
 impl FilespiderState {

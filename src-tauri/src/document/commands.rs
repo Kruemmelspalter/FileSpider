@@ -54,8 +54,11 @@ pub async fn get_meta(state: State<'_, FilespiderState>, id: Uuid) -> Result<Met
 }
 
 #[tauri::command]
-pub async fn render(state: State<'_, FilespiderState>, id: Uuid) -> Result<RenderType, String> {
-    document::render(
+pub async fn render(
+    state: State<'_, FilespiderState>,
+    id: Uuid,
+) -> Result<(String, RenderType), String> {
+    document::render::render(
         &*state.pool.lock().await,
         &mut *state.renderers.lock().await,
         id,

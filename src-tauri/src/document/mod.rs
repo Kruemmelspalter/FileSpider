@@ -1,33 +1,43 @@
 use crate::directories::get_filespider_directory;
-use crate::types::DocType;
-use crate::types::Meta;
-use crate::types::MetaPatch;
-use crate::types::RenderType;
+use crate::types::*;
 use chrono::NaiveDateTime;
 use eyre::eyre;
 use eyre::Result;
 use mac_address::get_mac_address;
-use sqlx::query;
-use sqlx::Row;
-use sqlx::SqlitePool;
+use sqlx::{query, Row, SqlitePool};
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
-use tokio::process;
 use tokio::process::Command;
-use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 pub mod commands;
+pub mod render;
 
 async fn document_exists(id: Uuid) -> Result<()> {
-    let path = format!("{}/{}/{}", get_filespider_directory()?, id, id);
-    match tokio::fs::try_exists(path).await? {
-        true => Err(eyre!("document does not exist")),
-        false => Ok(()),
+    match tokio::fs::try_exists(get_document_file(id)?).await {
+        Ok(true) => Ok(()),
+        _ => Err(eyre!("document does not exist")),
     }
 }
+
+fn get_document_directory(id: Uuid) -> Result<String> {
+    Ok(format!("{}/{}", get_filespider_directory()?, id))
+}
+
+fn get_document_file(id: Uuid) -> Result<String> {
+    Ok(format!("{}/{}", get_document_directory(id)?, id))
+}
+
+fn get_cache_directory() -> Result<String> {
+    Ok(format!("{}/{}", get_filespider_directory()?, ".cache"))
+}
+
+fn get_cache_file(id: Uuid) -> Result<String> {
+    Ok(format!("{}/{}", get_cache_directory()?, id))
+}
+
 pub async fn search(
     pool: &SqlitePool,
     pos_filter: Vec<String>,
@@ -148,7 +158,7 @@ pub async fn get_meta(pool: &SqlitePool, id: Uuid) -> Result<Meta> {
 /// returns Ok(false) if editor is already running, if editor got spawned it returns Ok(true)
 pub async fn open_editor(
     pool: &SqlitePool,
-    editors: &mut HashMap<Uuid, process::Child>,
+    editors: &mut HashMap<Uuid, tokio::process::Child>,
     id: Uuid,
 ) -> Result<bool> {
     document_exists(id).await?;
@@ -241,15 +251,4 @@ pub async fn get_tags(pool: &SqlitePool, crib: String) -> Result<Vec<String>> {
     .map(|x| x.tag)
     .fetch_all(pool)
     .await?)
-}
-
-pub async fn render(
-    pool: &SqlitePool,
-    renderers: &mut HashMap<Uuid, JoinHandle<()>>,
-    id: Uuid,
-) -> Result<RenderType> {
-    document_exists(id).await?;
-    let meta = get_meta(pool, id).await?;
-
-    todo!()
 }

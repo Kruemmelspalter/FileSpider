@@ -21,7 +21,7 @@ use crate::{
     types::{DocType, Meta, RenderType},
 };
 
-use super::{get_cache_file, get_document_directory, get_document_file};
+use super::{get_cache_file, get_document_basename, get_document_directory, get_document_file};
 
 pub type Hash = u64;
 
@@ -128,8 +128,8 @@ fn get_from_cache(id: Uuid, render_type: RenderType) -> Result<(String, RenderTy
 }
 
 async fn render_task(meta: Meta, hash: Hash, mut connection: SqliteConnection) {
-    let renderer = get_renderer_from_doc_type(meta.doc_type);
-    match renderer.render(meta.id, hash, &mut connection).await {
+    let renderer = get_renderer_from_doc_type(&meta.doc_type);
+    match renderer.render(meta.id, hash, &mut connection, &meta).await {
         Ok(_) => {}
         Err(e) => {
             tokio::fs::write(get_cache_file(meta.id).unwrap(), e.to_string())
@@ -175,7 +175,7 @@ async fn copy_into_cache<'a>(
     Ok(())
 }
 
-fn get_renderer_from_doc_type(doc_type: DocType) -> Box<dyn Renderer + Send + Sync> {
+fn get_renderer_from_doc_type(doc_type: &DocType) -> Box<dyn Renderer + Send + Sync> {
     match doc_type {
         DocType::Plain => Box::new(PlainRenderer),
         DocType::Markdown => Box::new(MarkdownRenderer),
@@ -186,19 +186,31 @@ fn get_renderer_from_doc_type(doc_type: DocType) -> Box<dyn Renderer + Send + Sy
 
 #[async_trait]
 trait Renderer {
-    async fn render(&self, id: Uuid, hash: Hash, connection: &mut SqliteConnection) -> Result<()>;
+    async fn render(
+        &self,
+        id: Uuid,
+        hash: Hash,
+        connection: &mut SqliteConnection,
+        meta: &Meta,
+    ) -> Result<()>;
 }
 
 struct PlainRenderer;
 
 #[async_trait]
 impl Renderer for PlainRenderer {
-    async fn render(&self, id: Uuid, hash: Hash, connection: &mut SqliteConnection) -> Result<()> {
+    async fn render(
+        &self,
+        id: Uuid,
+        hash: Hash,
+        connection: &mut SqliteConnection,
+        meta: &Meta,
+    ) -> Result<()> {
         copy_into_cache(
             connection,
             id,
             hash,
-            get_document_file(id)?,
+            get_document_file(meta)?,
             RenderType::Plain,
         )
         .await?;
@@ -210,13 +222,23 @@ struct MarkdownRenderer;
 
 #[async_trait]
 impl Renderer for MarkdownRenderer {
-    async fn render(&self, id: Uuid, hash: Hash, connection: &mut SqliteConnection) -> Result<()> {
+    async fn render(
+        &self,
+        id: Uuid,
+        hash: Hash,
+        connection: &mut SqliteConnection,
+        meta: &Meta,
+    ) -> Result<()> {
         let tempdir = tempfile::tempdir()?;
         let temppath = tempdir.path();
 
         tokio::fs::copy(get_document_directory(id)?, temppath).await?; // TODO does this work
 
-        tokio::fs::rename(temppath.join(id.to_string()), temppath.join("in.md")).await?;
+        tokio::fs::rename(
+            temppath.join(get_document_basename(meta)),
+            temppath.join("in.md"),
+        )
+        .await?;
 
         if !tokio::process::Command::new("pandoc")
             .args(vec!["in.md", "-o", "out.html", "-s"])
@@ -248,13 +270,23 @@ struct LaTeXRenderer;
 
 #[async_trait]
 impl Renderer for LaTeXRenderer {
-    async fn render(&self, id: Uuid, hash: Hash, connection: &mut SqliteConnection) -> Result<()> {
+    async fn render(
+        &self,
+        id: Uuid,
+        hash: Hash,
+        connection: &mut SqliteConnection,
+        meta: &Meta,
+    ) -> Result<()> {
         let tempdir = tempfile::tempdir()?;
         let temppath = tempdir.path();
 
         tokio::fs::copy(get_document_directory(id)?, temppath).await?; // TODO does this work
 
-        tokio::fs::rename(temppath.join(id.to_string()), temppath.join("in.tex")).await?;
+        tokio::fs::rename(
+            temppath.join(get_document_basename(meta)),
+            temppath.join("in.tex"),
+        )
+        .await?;
 
         if !tokio::process::Command::new("pdflatex")
             .args(vec!["-draftmode", "-halt-on-error", "in.tex"])
@@ -297,13 +329,23 @@ struct XournalPPRenderer;
 
 #[async_trait]
 impl Renderer for XournalPPRenderer {
-    async fn render(&self, id: Uuid, hash: Hash, connection: &mut SqliteConnection) -> Result<()> {
+    async fn render(
+        &self,
+        id: Uuid,
+        hash: Hash,
+        connection: &mut SqliteConnection,
+        meta: &Meta,
+    ) -> Result<()> {
         let tempdir = tempfile::tempdir()?;
         let temppath = tempdir.path();
 
         tokio::fs::copy(get_document_directory(id)?, temppath).await?; // TODO does this work
 
-        tokio::fs::rename(temppath.join(id.to_string()), temppath.join("in.xopp")).await?;
+        tokio::fs::rename(
+            temppath.join(get_document_basename(meta)),
+            temppath.join("in.xopp"),
+        )
+        .await?;
 
         // if !tokio::process::Command::new("sh")
         //     .arg("-c")

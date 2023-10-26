@@ -2,7 +2,8 @@ create table if not exists Document (
      id char(16) primary key,
      title varchar(32) not null,
      type varchar(16) not null,
-     added integer not null
+     added integer not null,
+     file_extension varchar(16) not null
 );
 
 create table if not exists Tag (

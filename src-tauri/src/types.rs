@@ -13,6 +13,7 @@ pub struct Meta {
     pub created: NaiveDateTime,
     pub accessed: NaiveDateTime,
     pub id: Uuid,
+    pub extension: String,
 }
 
 #[derive(Serialize, Deserialize)]

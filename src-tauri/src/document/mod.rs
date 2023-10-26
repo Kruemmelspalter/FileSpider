@@ -10,13 +10,14 @@ use std::str::FromStr;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 use tokio::process::Command;
+
 use uuid::Uuid;
 
 pub mod commands;
 pub mod render;
 
 async fn document_exists(id: Uuid) -> Result<()> {
-    match tokio::fs::try_exists(get_document_file(id)?).await {
+    match tokio::fs::try_exists(get_document_directory(id)?).await {
         Ok(true) => Ok(()),
         _ => Err(eyre!("document does not exist")),
     }
@@ -26,8 +27,16 @@ fn get_document_directory(id: Uuid) -> Result<String> {
     Ok(format!("{}/{}", get_filespider_directory()?, id))
 }
 
-fn get_document_file(id: Uuid) -> Result<String> {
-    Ok(format!("{}/{}", get_document_directory(id)?, id))
+fn get_document_basename(meta: &Meta) -> String {
+    format!("{}.{}", meta.id, meta.extension)
+}
+
+fn get_document_file(meta: &Meta) -> Result<String> {
+    Ok(format!(
+        "{}/{}",
+        get_document_directory(meta.id)?,
+        get_document_basename(meta)
+    ))
 }
 
 fn get_cache_directory() -> Result<String> {
@@ -127,9 +136,12 @@ pub async fn create(
 pub async fn get_meta(pool: &SqlitePool, id: Uuid) -> Result<Meta> {
     document_exists(id).await?;
 
-    let doc_res = query!("select title, type, added from Document where id = ?", id)
-        .fetch_one(pool)
-        .await?;
+    let doc_res = query!(
+        "select title, type, added, file_extension from Document where id = ?",
+        id
+    )
+    .fetch_one(pool)
+    .await?;
 
     let tags = query!("select tag from Tag where document = ?", id)
         .map(|x| x.tag)
@@ -152,6 +164,7 @@ pub async fn get_meta(pool: &SqlitePool, id: Uuid) -> Result<Meta> {
         )
         .unwrap(),
         id,
+        extension: doc_res.file_extension,
     })
 }
 

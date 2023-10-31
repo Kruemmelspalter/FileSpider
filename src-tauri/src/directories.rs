@@ -12,15 +12,19 @@ pub fn get_filespider_directory() -> Result<String> {
         if unsafe { geteuid() } == 0 {
             "/var/lib".to_string()
         } else {
-            std::env::var("XDG_CONFIG_HOME")
-                .unwrap_or(format!("{}/.config", std::env::var("HOME")?))
+            std::env::var("XDG_DATA_HOME")
+                .unwrap_or(format!("{}/.local/share", std::env::var("HOME")?))
         }
     )))
 }
 
-pub async fn create_directory() -> Result<()> {
-    if !tokio::fs::try_exists(get_filespider_directory()?).await? {
-        tokio::fs::create_dir_all(get_filespider_directory()?).await?;
+pub fn get_cache_directory() -> Result<String> {
+    Ok(format!("{}/{}", get_filespider_directory()?, ".cache"))
+}
+
+pub async fn create_directories() -> Result<()> {
+    if !tokio::fs::try_exists(get_cache_directory()?).await? {
+        tokio::fs::create_dir_all(get_cache_directory()?).await?;
     }
     Ok(())
 }

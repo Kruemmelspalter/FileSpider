@@ -1,3 +1,4 @@
+use crate::directories::get_cache_directory;
 use crate::directories::get_filespider_directory;
 use crate::types::*;
 use chrono::NaiveDateTime;
@@ -28,7 +29,10 @@ fn get_document_directory(id: Uuid) -> Result<String> {
 }
 
 fn get_document_basename(meta: &Meta) -> String {
-    format!("{}.{}", meta.id, meta.extension)
+    match &meta.extension {
+        Some(s) => format!("{}.{}", meta.id, s),
+        None => meta.id.to_string(),
+    }
 }
 
 fn get_document_file(meta: &Meta) -> Result<String> {
@@ -37,10 +41,6 @@ fn get_document_file(meta: &Meta) -> Result<String> {
         get_document_directory(meta.id)?,
         get_document_basename(meta)
     ))
-}
-
-fn get_cache_directory() -> Result<String> {
-    Ok(format!("{}/{}", get_filespider_directory()?, ".cache"))
 }
 
 fn get_cache_file(id: Uuid) -> Result<String> {
@@ -91,6 +91,7 @@ pub async fn create(
     title: String,
     doc_type: Option<DocType>,
     tags: Vec<String>,
+    extension: Option<String>, // TODO extension nullable and no . if empty
     file: Option<String>,
 ) -> Result<Uuid> {
     let id: Uuid = Uuid::now_v1(&get_mac_address()?.map(|x| x.bytes()).unwrap_or([0u8; 6]));
@@ -116,11 +117,12 @@ pub async fn create(
     let doc_type_str = doc_type.unwrap_or(DocType::Plain).to_string();
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u32;
     query!(
-        "insert into Document (id, title, type, added) values (?, ?, ?, ?)",
+        "insert into Document (id, title, type, added, file_extension) values (?, ?, ?, ?, ?)",
         id,
         title,
         doc_type_str,
-        timestamp
+        timestamp,
+        extension
     )
     .execute(pool)
     .await?;

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "insert into Document (id, title, type, added, file_extension) values (?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "ccba131029ce87db893168e41c44e4fb8a2ab893073bee504be28819a63279ef"
+}

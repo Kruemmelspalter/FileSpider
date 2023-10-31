@@ -5,7 +5,7 @@ use eyre::eyre;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct Meta {
     pub title: String,
     pub doc_type: DocType,
@@ -13,24 +13,24 @@ pub struct Meta {
     pub created: NaiveDateTime,
     pub accessed: NaiveDateTime,
     pub id: Uuid,
-    pub extension: String,
+    pub extension: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub enum MetaPatch {
     ChangeTitle(String),
     AddTag(String),
     RemoveTag(String),
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub enum RenderType {
     Plain,
     Html,
     Pdf,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub enum DocType {
     Plain,
     Markdown,

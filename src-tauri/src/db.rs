@@ -1,5 +1,3 @@
-use std::fs;
-
 use std::str::FromStr;
 
 use eyre::Result;
@@ -9,7 +7,7 @@ use sqlx::SqlitePool;
 use crate::directories::get_filespider_directory;
 
 pub async fn init() -> Result<SqlitePool> {
-    fs::create_dir_all(get_filespider_directory()?)?;
+    std::fs::create_dir_all(get_filespider_directory()?)?;
 
     let db_path = std::env::var("DATABASE_URL")
         .unwrap_or(format!("{}/filespider.sqlite", get_filespider_directory()?));

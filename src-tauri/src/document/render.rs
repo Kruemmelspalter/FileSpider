@@ -13,7 +13,7 @@ use eyre::eyre;
 use eyre::Result;
 use fasthash::{FastHasher, SpookyHasher};
 use sqlx::{query, SqliteConnection, SqlitePool};
-use tokio::{sync::Mutex, task::JoinHandle};
+use tokio::{io::AsyncWriteExt, sync::Mutex, task::JoinHandle};
 use uuid::Uuid;
 
 use crate::{
@@ -60,7 +60,7 @@ pub async fn render(
 ) -> Result<(String, RenderType)> {
     document::document_exists(id).await?;
     let hash = hash_document_files(id).await?;
-    let hex_hash = format!("{:128x}", hash);
+    let hex_hash = format!("{:16x}", hash);
 
     if let Some(handle) = renderers.get(&(id, hash)) {
         if !handle.lock().await.is_finished() {
@@ -129,16 +129,22 @@ fn get_from_cache(id: Uuid, render_type: RenderType) -> Result<(String, RenderTy
 
 async fn render_task(meta: Meta, hash: Hash, mut connection: SqliteConnection) {
     let renderer = get_renderer_from_doc_type(&meta.doc_type);
-    match renderer.render(meta.id, hash, &mut connection, &meta).await {
-        Ok(_) => {}
-        Err(e) => {
-            tokio::fs::write(get_cache_file(meta.id).unwrap(), e.to_string())
-                .await
-                .unwrap();
-            insert_into_cache(&mut connection, meta.id, hash, RenderType::Plain)
-                .await
-                .unwrap()
-        }
+    if let Err(e) = renderer.render(meta.id, hash, &mut connection, &meta).await {
+        tokio::fs::File::options()
+            .append(true)
+            .create(true)
+            .open(get_cache_file(meta.id).unwrap())
+            .await
+            .unwrap()
+            .write(e.to_string().as_bytes())
+            .await
+            .unwrap();
+        tokio::fs::write(get_cache_file(meta.id).unwrap(), e.to_string())
+            .await
+            .unwrap();
+        insert_into_cache(&mut connection, meta.id, hash, RenderType::Plain)
+            .await
+            .unwrap()
     };
 }
 
@@ -148,7 +154,7 @@ async fn insert_into_cache<'a>(
     hash: Hash,
     render_type: RenderType,
 ) -> Result<()> {
-    let hex_hash = format!("{:128x}", hash);
+    let hex_hash = format!("{:16x}", hash);
     let render_str = render_type.to_string();
 
     query!(

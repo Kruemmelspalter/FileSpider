@@ -3,7 +3,7 @@ create table if not exists Document (
      title varchar(32) not null,
      type varchar(16) not null,
      added integer not null,
-     file_extension varchar(16) not null
+     file_extension varchar(16)
 );
 
 create table if not exists Tag (

@@ -39,11 +39,19 @@ pub async fn create(
     title: String,
     doc_type: Option<DocType>,
     tags: Vec<String>,
+    extension: Option<String>,
     file: Option<String>,
 ) -> Result<Uuid, String> {
-    document::create(&*state.pool.lock().await, title, doc_type, tags, file)
-        .await
-        .map_err(|x| x.to_string())
+    document::create(
+        &*state.pool.lock().await,
+        title,
+        doc_type,
+        tags,
+        extension,
+        file,
+    )
+    .await
+    .map_err(|x| x.to_string())
 }
 
 #[tauri::command]

@@ -30,7 +30,11 @@ impl FilespiderState {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    directories::create_directory().await?;
+    env_logger::Builder::new()
+        .filter_level(log::LevelFilter::Trace)
+        .init();
+
+    directories::create_directories().await?;
 
     let pool = db::init().await?;
     sqlx::migrate!().run(&pool).await?;

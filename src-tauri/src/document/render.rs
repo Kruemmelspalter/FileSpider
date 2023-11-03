@@ -7,13 +7,13 @@ use std::{
 };
 
 use async_recursion::async_recursion;
-
 use async_trait::async_trait;
 use eyre::eyre;
 use eyre::Result;
 use fasthash::{FastHasher, SpookyHasher};
 use sqlx::{query, SqliteConnection, SqlitePool};
-use tokio::{io::AsyncWriteExt, sync::Mutex, task::JoinHandle};
+use tokio::{sync::Mutex, task::JoinHandle};
+use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 
 use crate::{
@@ -31,9 +31,9 @@ pub async fn hash_document_files(id: Uuid) -> Result<Hash> {
     let mut hasher = fasthash::SpookyHasher::new();
     hash_file(
         &mut hasher,
-        PathBuf::from(document::get_document_directory(id)?),
+        PathBuf::from(get_document_directory(id)?),
     )
-    .await?;
+        .await?;
     Ok(hasher.finish())
 }
 
@@ -73,9 +73,9 @@ pub async fn render(
                 id,
                 hex_hash
             )
-            .map(|r| RenderType::from_str(r.render_type.as_str()))
-            .fetch_one(pool)
-            .await??,
+                .map(|r| RenderType::from_str(r.render_type.as_str()))
+                .fetch_one(pool)
+                .await??,
         );
     }
 
@@ -86,9 +86,9 @@ pub async fn render(
         id,
         hex_hash
     )
-    .map(|r| r.render_type)
-    .fetch_optional(pool)
-    .await?
+        .map(|r| r.render_type)
+        .fetch_optional(pool)
+        .await?
     {
         return get_from_cache(id, RenderType::from_str(render_type.as_str())?);
     }
@@ -117,9 +117,9 @@ pub async fn render(
             id,
             hex_hash
         )
-        .map(|r| RenderType::from_str(r.render_type.as_str()))
-        .fetch_one(pool)
-        .await??,
+            .map(|r| RenderType::from_str(r.render_type.as_str()))
+            .fetch_one(pool)
+            .await??,
     )
 }
 
@@ -165,7 +165,7 @@ async fn insert_into_cache<'a>(
         hex_hash,
         render_str
     )
-    .execute(connection).await?;
+        .execute(connection).await?;
     Ok(())
 }
 
@@ -219,7 +219,7 @@ impl Renderer for PlainRenderer {
             get_document_file(meta)?,
             RenderType::Plain,
         )
-        .await?;
+            .await?;
         Ok(())
     }
 }
@@ -235,20 +235,20 @@ impl Renderer for MarkdownRenderer {
         connection: &mut SqliteConnection,
         meta: &Meta,
     ) -> Result<()> {
-        let tempdir = tempfile::tempdir()?;
-        let temppath = tempdir.path();
+        let temp_dir = tempfile::tempdir()?;
+        let temp_path = temp_dir.path();
 
-        tokio::fs::copy(get_document_directory(id)?, temppath).await?; // TODO does this work
+        tokio::fs::copy(get_document_directory(id)?, temp_path).await?;
 
         tokio::fs::rename(
-            temppath.join(get_document_basename(meta)),
-            temppath.join("in.md"),
+            temp_path.join(get_document_basename(meta)),
+            temp_path.join("in.md"),
         )
-        .await?;
+            .await?;
 
         if !tokio::process::Command::new("pandoc")
             .args(vec!["in.md", "-o", "out.html", "-s"])
-            .current_dir(temppath)
+            .current_dir(temp_path)
             .spawn()?
             .wait()
             .await?
@@ -261,12 +261,12 @@ impl Renderer for MarkdownRenderer {
             connection,
             id,
             hash,
-            temppath.join("out.html"),
+            temp_path.join("out.html"),
             RenderType::Html,
         )
-        .await?;
+            .await?;
 
-        drop(tempdir);
+        drop(temp_dir);
 
         Ok(())
     }
@@ -283,20 +283,20 @@ impl Renderer for LaTeXRenderer {
         connection: &mut SqliteConnection,
         meta: &Meta,
     ) -> Result<()> {
-        let tempdir = tempfile::tempdir()?;
-        let temppath = tempdir.path();
+        let temp_dir = tempfile::tempdir()?;
+        let temp_path = temp_dir.path();
 
-        tokio::fs::copy(get_document_directory(id)?, temppath).await?; // TODO does this work
+        tokio::fs::copy(get_document_directory(id)?, temp_path).await?;
 
         tokio::fs::rename(
-            temppath.join(get_document_basename(meta)),
-            temppath.join("in.tex"),
+            temp_path.join(get_document_basename(meta)),
+            temp_path.join("in.tex"),
         )
-        .await?;
+            .await?;
 
         if !tokio::process::Command::new("pdflatex")
             .args(vec!["-draftmode", "-halt-on-error", "in.tex"])
-            .current_dir(temppath)
+            .current_dir(temp_path)
             .spawn()?
             .wait()
             .await?
@@ -307,7 +307,7 @@ impl Renderer for LaTeXRenderer {
 
         if !tokio::process::Command::new("pdflatex")
             .args(vec!["-halt-on-error", "in.tex"])
-            .current_dir(temppath)
+            .current_dir(temp_path)
             .spawn()?
             .wait()
             .await?
@@ -320,12 +320,12 @@ impl Renderer for LaTeXRenderer {
             connection,
             id,
             hash,
-            temppath.join("in.pdf"),
+            temp_path.join("in.pdf"),
             RenderType::Pdf,
         )
-        .await?;
+            .await?;
 
-        drop(tempdir);
+        drop(temp_dir);
 
         Ok(())
     }
@@ -342,21 +342,21 @@ impl Renderer for XournalPPRenderer {
         connection: &mut SqliteConnection,
         meta: &Meta,
     ) -> Result<()> {
-        let tempdir = tempfile::tempdir()?;
-        let temppath = tempdir.path();
+        let temp_dir = tempfile::tempdir()?;
+        let temp_path = temp_dir.path();
 
-        tokio::fs::copy(get_document_directory(id)?, temppath).await?; // TODO does this work
+        tokio::fs::copy(get_document_directory(id)?, temp_path).await?;
 
         tokio::fs::rename(
-            temppath.join(get_document_basename(meta)),
-            temppath.join("in.xopp"),
+            temp_path.join(get_document_basename(meta)),
+            temp_path.join("in.xopp"),
         )
-        .await?;
+            .await?;
 
         // if !tokio::process::Command::new("sh")
         //     .arg("-c")
         //     .arg(format!("gunzip -c -S .xopp in.xopp |sed -r -e 's/filename=\".*\\/{}\\/(.*)\" /filename=\"\\1\" /g'|gzip>tmp.xopp", id))
-        //     .current_dir(temppath)
+        //     .current_dir(temp_path)
         //     .spawn()?
         //     .wait()
         //     .await?
@@ -367,7 +367,7 @@ impl Renderer for XournalPPRenderer {
 
         if !tokio::process::Command::new("xournalpp")
             .args(vec!["-p", "out.pdf", "in.xopp"])
-            .current_dir(temppath)
+            .current_dir(temp_path)
             .spawn()?
             .wait()
             .await?
@@ -380,10 +380,10 @@ impl Renderer for XournalPPRenderer {
             connection,
             id,
             hash,
-            temppath.join("out.pdf"),
+            temp_path.join("out.pdf"),
             RenderType::Pdf,
         )
-        .await?;
+            .await?;
 
         Ok(())
     }

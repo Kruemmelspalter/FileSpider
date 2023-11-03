@@ -5,7 +5,7 @@ use eyre::eyre;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct Meta {
     pub title: String,
     pub doc_type: DocType,
@@ -16,21 +16,21 @@ pub struct Meta {
     pub extension: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub enum MetaPatch {
     ChangeTitle(String),
     AddTag(String),
     RemoveTag(String),
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub enum RenderType {
     Plain,
     Html,
     Pdf,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub enum DocType {
     Plain,
     Markdown,
@@ -83,7 +83,7 @@ impl ToString for DocType {
             DocType::XournalPP => "xopp",
             DocType::LaTeX => "tex",
         }
-        .to_string()
+            .to_string()
     }
 }
 
@@ -95,6 +95,6 @@ impl DocType {
             DocType::XournalPP => "xournalpp",
             DocType::LaTeX => "kate",
         }
-        .to_string()
+            .to_string()
     }
 }

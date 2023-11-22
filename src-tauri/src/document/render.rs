@@ -10,10 +10,11 @@ use async_recursion::async_recursion;
 use async_trait::async_trait;
 use eyre::eyre;
 use eyre::Result;
+use eyre::WrapErr;
 use fasthash::{FastHasher, SpookyHasher};
 use sqlx::{query, SqliteConnection, SqlitePool};
 use tokio::{sync::Mutex, task::JoinHandle};
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use uuid::Uuid;
 
 use crate::{
@@ -26,12 +27,12 @@ use super::{get_cache_file, get_document_basename, get_document_directory, get_d
 pub type Hash = u64;
 
 pub async fn hash_document_files(id: Uuid) -> Result<Hash> {
-    document::document_exists(id).await?;
+    document::document_exists(&id).await?;
 
     let mut hasher = fasthash::SpookyHasher::new();
     hash_file(
         &mut hasher,
-        PathBuf::from(get_document_directory(id)?),
+        PathBuf::from(get_document_directory(&id)?),
     )
         .await?;
     Ok(hasher.finish())
@@ -58,9 +59,10 @@ pub async fn render(
     renderers: &mut HashMap<(Uuid, Hash), Mutex<JoinHandle<()>>>,
     id: Uuid,
 ) -> Result<(String, RenderType)> {
-    document::document_exists(id).await?;
+    document::document_exists(&id).await?;
     let hash = hash_document_files(id).await?;
     let hex_hash = format!("{:16x}", hash);
+    dbg!(&hex_hash);
 
     if let Some(handle) = renderers.get(&(id, hash)) {
         if !handle.lock().await.is_finished() {
@@ -136,7 +138,7 @@ async fn render_task(meta: Meta, hash: Hash, mut connection: SqliteConnection) {
             .open(get_cache_file(meta.id).unwrap())
             .await
             .unwrap()
-            .write(e.to_string().as_bytes())
+            .write(format!("{:#?}", e).as_bytes())
             .await
             .unwrap();
         tokio::fs::write(get_cache_file(meta.id).unwrap(), e.to_string())
@@ -144,7 +146,8 @@ async fn render_task(meta: Meta, hash: Hash, mut connection: SqliteConnection) {
             .unwrap();
         insert_into_cache(&mut connection, meta.id, hash, RenderType::Plain)
             .await
-            .unwrap()
+            .unwrap();
+        println!("{:#?}", e);
     };
 }
 
@@ -176,7 +179,7 @@ async fn copy_into_cache<'a>(
     path: impl AsRef<Path>,
     render_type: RenderType,
 ) -> Result<()> {
-    tokio::fs::copy(path, get_cache_file(id)?).await?;
+    tokio::fs::copy(path, get_cache_file(id)?).await.wrap_err("copying into cache failed")?;
     insert_into_cache(connection, id, hash, render_type).await?;
     Ok(())
 }
@@ -187,6 +190,43 @@ fn get_renderer_from_doc_type(doc_type: &DocType) -> Box<dyn Renderer + Send + S
         DocType::Markdown => Box::new(MarkdownRenderer),
         DocType::XournalPP => Box::new(XournalPPRenderer),
         DocType::LaTeX => Box::new(LaTeXRenderer),
+    }
+}
+
+async fn copy_into_tempdir(id: &Uuid, temp_path: &Path) -> Result<()> {
+    if tokio::process::Command::new("bash")
+        .args(vec!["-c", &format!("cp {}/* {}", get_document_directory(id)?, temp_path.to_str().unwrap())])
+        .spawn()?
+        .wait().await?.success() {
+        Ok(())
+    } else {
+        Err(eyre!("copying exited with code != 0"))
+    }.wrap_err("copying into tempdir failed")
+}
+
+async fn execute_command(command: &str, args: Vec<&str>, current_dir: Option<&Path>) -> Result<()> {
+    match tokio::process::Command::new(command)
+        .args(args)
+        .current_dir(current_dir.unwrap_or(Path::new("/")))
+        .spawn() {
+        Ok(mut c) => {
+            match c.wait().await {
+                Ok(s) => {
+                    if s.success() {
+                        let mut s = String::new();
+                        if let Some(mut a) = c.stderr {
+                            a.read_to_string(&mut s).await?;
+                        }
+                        println!("{}", s);
+                        Ok(())
+                    } else {
+                        Err(eyre!("command exited with code != 0"))
+                    }
+                }
+                Err(e) => Err(e).wrap_err("waiting for command failed"),
+            }
+        }
+        Err(e) => Err(e).wrap_err("spawning command failed"),
     }
 }
 
@@ -216,7 +256,7 @@ impl Renderer for PlainRenderer {
             connection,
             id,
             hash,
-            get_document_file(meta)?,
+            get_document_file(&meta.id, &meta.extension)?,
             RenderType::Plain,
         )
             .await?;
@@ -238,24 +278,15 @@ impl Renderer for MarkdownRenderer {
         let temp_dir = tempfile::tempdir()?;
         let temp_path = temp_dir.path();
 
-        tokio::fs::copy(get_document_directory(id)?, temp_path).await?;
+        copy_into_tempdir(&id, temp_path).await?;
 
         tokio::fs::rename(
-            temp_path.join(get_document_basename(meta)),
+            temp_path.join(get_document_basename(&meta.id, &meta.extension)),
             temp_path.join("in.md"),
         )
             .await?;
 
-        if !tokio::process::Command::new("pandoc")
-            .args(vec!["in.md", "-o", "out.html", "-s"])
-            .current_dir(temp_path)
-            .spawn()?
-            .wait()
-            .await?
-            .success()
-        {
-            return Err(eyre!("pandoc failed"));
-        }
+        execute_command("pandoc", vec!["in.md", "-o", "out.html", "-s"], Some(temp_path)).await?;
 
         copy_into_cache(
             connection,
@@ -283,38 +314,21 @@ impl Renderer for LaTeXRenderer {
         connection: &mut SqliteConnection,
         meta: &Meta,
     ) -> Result<()> {
+        dbg!("rendering via latex");
         let temp_dir = tempfile::tempdir()?;
         let temp_path = temp_dir.path();
 
-        tokio::fs::copy(get_document_directory(id)?, temp_path).await?;
+        copy_into_tempdir(&id, temp_path).await?;
 
         tokio::fs::rename(
-            temp_path.join(get_document_basename(meta)),
+            temp_path.join(get_document_basename(&meta.id, &meta.extension)),
             temp_path.join("in.tex"),
         )
             .await?;
 
-        if !tokio::process::Command::new("pdflatex")
-            .args(vec!["-draftmode", "-halt-on-error", "in.tex"])
-            .current_dir(temp_path)
-            .spawn()?
-            .wait()
-            .await?
-            .success()
-        {
-            return Err(eyre!("draftmode latex failed"));
-        }
+        execute_command("pdflatex", vec!["-draftmode", "-halt-on-error", "in.tex"], Some(temp_path)).await?;
 
-        if !tokio::process::Command::new("pdflatex")
-            .args(vec!["-halt-on-error", "in.tex"])
-            .current_dir(temp_path)
-            .spawn()?
-            .wait()
-            .await?
-            .success()
-        {
-            return Err(eyre!("render latex failed"));
-        }
+        execute_command("pdflatex", vec!["-halt-on-error", "in.tex"], Some(temp_path)).await?;
 
         copy_into_cache(
             connection,
@@ -345,10 +359,10 @@ impl Renderer for XournalPPRenderer {
         let temp_dir = tempfile::tempdir()?;
         let temp_path = temp_dir.path();
 
-        tokio::fs::copy(get_document_directory(id)?, temp_path).await?;
+        copy_into_tempdir(&id, temp_path).await?;
 
         tokio::fs::rename(
-            temp_path.join(get_document_basename(meta)),
+            temp_path.join(get_document_basename(&meta.id, &meta.extension)),
             temp_path.join("in.xopp"),
         )
             .await?;
@@ -362,19 +376,11 @@ impl Renderer for XournalPPRenderer {
         //     .await?
         //     .success()
         // {
+        //
         //     return Err(eyre!("xopp export failed"));
         // }
 
-        if !tokio::process::Command::new("xournalpp")
-            .args(vec!["-p", "out.pdf", "in.xopp"])
-            .current_dir(temp_path)
-            .spawn()?
-            .wait()
-            .await?
-            .success()
-        {
-            return Err(eyre!("xopp export failed"));
-        }
+        execute_command("xournalpp", vec!["-p", "out.pdf", "in.xopp"], Some(temp_path)).await?;
 
         copy_into_cache(
             connection,

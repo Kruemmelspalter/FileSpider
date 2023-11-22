@@ -10,7 +10,7 @@ async fn tests() {
     let dtmp = tempdir().unwrap();
     let tempdir = dtmp.path();
 
-    match async {
+    if let Err(e) = async {
         env_logger::Builder::new()
             .filter_level(log::LevelFilter::Trace)
             .init();
@@ -21,7 +21,7 @@ async fn tests() {
 
         directories::create_directories().await?;
 
-        assert!(!document_exists(uuid::uuid!("a346b1e3-2c11-4c72-87b1-122bfcc43560")).await.is_ok(), "random document exists");
+        assert!(!document_exists(&uuid::uuid!("a346b1e3-2c11-4c72-87b1-122bfcc43560")).await.is_ok(), "random document exists");
 
         let id = create(
             &pool,
@@ -68,6 +68,7 @@ async fn tests() {
             "ex".to_string(),
             0,
             1,
+            (SearchSortCriterium::CreationTime, false),
         )
             .await?;
 
@@ -78,7 +79,7 @@ async fn tests() {
         let tags_res = get_tags(&pool, "te".to_string()).await?;
         assert!(tags_res.len() == 1 && tags_res[0] == "test", "tag search failed");
 
-        tokio::fs::write(get_document_file(&meta)?, "testogus").await?;
+        tokio::fs::write(get_document_file(&meta.id, &meta.extension)?, "testogus").await?;
 
         let path = render(&pool, &mut HashMap::new(), id).await?;
 
@@ -89,10 +90,8 @@ async fn tests() {
 
         Ok::<(), eyre::Report>(())
     }
-        .await
-    {
-        Err(e) => assert!(false, "Error: {}", e)
-        _ => {}
+        .await {
+        assert!(false, "Error: {}", e)
     }
     drop(dtmp);
 }

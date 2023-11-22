@@ -1,16 +1,14 @@
-use crate::types::{DocType, Meta, MetaPatch, RenderType};
 use eyre::Result;
-
-use tauri::State;
-
 use tauri::{
     plugin::{Builder as PluginBuilder, TauriPlugin},
     Runtime,
 };
+use tauri::State;
 use uuid::Uuid;
 
 use crate::document;
 use crate::FilespiderState;
+use crate::types::*;
 
 #[tauri::command]
 pub async fn search(
@@ -20,6 +18,7 @@ pub async fn search(
     crib: String,
     page: u32,
     page_length: u32,
+    sort: SearchSorting,
 ) -> Result<Vec<Meta>, String> {
     document::search(
         &*state.pool.lock().await,
@@ -28,9 +27,8 @@ pub async fn search(
         crib,
         page,
         page_length,
-    )
-    .await
-    .map_err(|x| x.to_string())
+        sort,
+    ).await.map_err(|x| format!("{x:#?}"))
 }
 
 #[tauri::command]
@@ -49,16 +47,12 @@ pub async fn create(
         tags,
         extension,
         file,
-    )
-    .await
-    .map_err(|x| x.to_string())
+    ).await.map_err(|x| format!("{x:#?}"))
 }
 
 #[tauri::command]
 pub async fn get_meta(state: State<'_, FilespiderState>, id: Uuid) -> Result<Meta, String> {
-    document::get_meta(&*state.pool.lock().await, id)
-        .await
-        .map_err(|x| x.to_string())
+    document::get_meta(&*state.pool.lock().await, id).await.map_err(|x| format!("{x:#?}"))
 }
 
 #[tauri::command]
@@ -70,9 +64,7 @@ pub async fn render(
         &*state.pool.lock().await,
         &mut *state.renderers.lock().await,
         id,
-    )
-    .await
-    .map_err(|x| x.to_string())
+    ).await.map_err(|x| format!("{x:#?}"))
 }
 
 /// returns Ok(false) if editor is already running, if editor got spawned it returns Ok(true)
@@ -82,9 +74,7 @@ pub async fn open_editor(state: State<'_, FilespiderState>, id: Uuid) -> Result<
         &*state.pool.lock().await,
         &mut *state.editors.lock().await,
         id,
-    )
-    .await
-    .map_err(|x| x.to_string())
+    ).await.map_err(|x| format!("{x:#?}"))
 }
 
 #[tauri::command]
@@ -93,16 +83,12 @@ pub async fn alter_meta(
     id: Uuid,
     patch: MetaPatch,
 ) -> Result<(), String> {
-    document::patch_meta(&*state.pool.lock().await, id, patch)
-        .await
-        .map_err(|x| x.to_string())
+    document::patch_meta(&*state.pool.lock().await, id, patch).await.map_err(|x| format!("{x:#?}"))
 }
 
 #[tauri::command]
 pub async fn delete(state: State<'_, FilespiderState>, id: Uuid) -> Result<(), String> {
-    document::delete(&*state.pool.lock().await, id)
-        .await
-        .map_err(|x| x.to_string())
+    document::delete(&*state.pool.lock().await, id).await.map_err(|x| format!("{x:#?}"))
 }
 
 #[tauri::command]
@@ -110,14 +96,11 @@ pub async fn get_tags(
     state: State<'_, FilespiderState>,
     crib: String,
 ) -> Result<Vec<String>, String> {
-    document::get_tags(&*state.pool.lock().await, crib)
-        .await
-        .map_err(|x| x.to_string())
+    document::get_tags(&*state.pool.lock().await, crib).await.map_err(|x| format!("{x:#?}"))
 }
 
 pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
-    PluginBuilder::new("document")
-        .invoke_handler(tauri::generate_handler![
+    PluginBuilder::new("document").invoke_handler(tauri::generate_handler![
             search,
             create,
             get_meta,
@@ -126,6 +109,5 @@ pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
             alter_meta,
             delete,
             get_tags
-        ])
-        .build()
+        ]).build()
 }

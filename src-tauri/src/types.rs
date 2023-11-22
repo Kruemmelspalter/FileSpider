@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::str::FromStr;
 
 use chrono::NaiveDateTime;
@@ -38,6 +39,16 @@ pub enum DocType {
     LaTeX,
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+pub enum SearchSortCriterium {
+    CreationTime,
+    // AccessTime,
+    // Title
+}
+
+/// bool is true for ascending, false for descending
+pub type SearchSorting = (SearchSortCriterium, bool);
+
 impl FromStr for RenderType {
     type Err = eyre::Report;
 
@@ -51,20 +62,21 @@ impl FromStr for RenderType {
     }
 }
 
-impl ToString for RenderType {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for RenderType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
             RenderType::Plain => "plain".to_string(),
             RenderType::Html => "html".to_string(),
             RenderType::Pdf => "pdf".to_string(),
-        }
+        };
+        write!(f, "{}", str)
     }
 }
 
 impl FromStr for DocType {
     type Err = eyre::Report;
 
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
             "plain" => Self::Plain,
             "markdown" | "md" => Self::Markdown,
@@ -75,26 +87,26 @@ impl FromStr for DocType {
     }
 }
 
-impl ToString for DocType {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for DocType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
             DocType::Plain => "plain",
             DocType::Markdown => "md",
             DocType::XournalPP => "xopp",
             DocType::LaTeX => "tex",
         }
-            .to_string()
+            .to_string();
+        write!(f, "{}", str)
     }
 }
 
 impl DocType {
-    pub fn get_editor(&self) -> String {
+    pub fn get_editor(&self) -> (&str, Vec<&str>) {
         match self {
-            DocType::Plain => "kate",
-            DocType::Markdown => "kate",
-            DocType::XournalPP => "xournalpp",
-            DocType::LaTeX => "kate",
+            DocType::Plain => ("kate", vec!["-b"]),
+            DocType::Markdown => ("kate", vec!["-b"]),
+            DocType::XournalPP => ("xournalpp", vec![]),
+            DocType::LaTeX => ("kate", vec!["-b"]),
         }
-            .to_string()
     }
 }

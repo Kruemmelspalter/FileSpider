@@ -25,29 +25,29 @@ pub mod render;
 #[cfg(test)]
 mod tests;
 
-async fn document_exists(id: Uuid) -> Result<()> {
+async fn document_exists(id: &Uuid) -> Result<()> {
     match tokio::fs::try_exists(get_document_directory(id)?).await {
         Ok(true) => Ok(()),
         _ => Err(eyre!("document does not exist")),
     }
 }
 
-fn get_document_directory(id: Uuid) -> Result<String> {
+fn get_document_directory(id: &Uuid) -> Result<String> {
     Ok(format!("{}/{}", get_filespider_directory()?, id))
 }
 
-fn get_document_basename(meta: &Meta) -> String {
-    match &meta.extension {
-        Some(s) => format!("{}.{}", meta.id, s),
-        None => meta.id.to_string(),
+fn get_document_basename(id: &Uuid, extension: &Option<String>) -> String {
+    match extension {
+        Some(s) => format!("{}.{}", id, s),
+        None => id.to_string(),
     }
 }
 
-fn get_document_file(meta: &Meta) -> Result<String> {
+fn get_document_file(id: &Uuid, extension: &Option<String>) -> Result<String> {
     Ok(format!(
         "{}/{}",
-        get_document_directory(meta.id)?,
-        get_document_basename(meta)
+        get_document_directory(id)?,
+        get_document_basename(id, extension)
     ))
 }
 
@@ -63,12 +63,16 @@ pub async fn search(
     crib: String,
     page: u32,
     page_length: u32,
+    sort: SearchSorting,
 ) -> Result<Vec<Meta>> {
+// TODO sort
     let query_str = format!(
-        "select id from Document left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as posTags on posTags.document = Document.id left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as negTags on negTags.document = document.id where {} and (negTags.tagCount = 0 or negTags.tagCount is null) and Document.title like ? limit ?, ?",
+        "select id from Document left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as posTags on posTags.document = Document.id left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as negTags on negTags.document = document.id where {} and (negTags.tagCount = 0 or negTags.tagCount is null) and Document.title like ?  order by {} {} limit ?, ?",
         if pos_filter.is_empty() { "()".to_string() } else { format!("(?{})", ", ?".repeat(pos_filter.len() - 1)) },
         if neg_filter.is_empty() { "()".to_string() } else { format!("(?{})", ", ?".repeat(neg_filter.len() - 1)) },
-        if pos_filter.is_empty() { "(posTags.tagCount = ? or posTags.tagCount is null)" } else { "posTags.tagCount = ?" }
+        if pos_filter.is_empty() { "(posTags.tagCount = ? or posTags.tagCount is null)" } else { "posTags.tagCount = ?" },
+        match sort.0 { SearchSortCriterium::CreationTime => "Document.added" },
+        if sort.1 { "asc" } else { "desc" }
     );
 
     let mut query = sqlx::query(&query_str);
@@ -80,10 +84,7 @@ pub async fn search(
         query = query.bind(neg_tag);
     }
 
-    query = query.bind(pos_filter.len() as u32)
-        .bind(format!("%{}%", crib))
-        .bind(page * page_length)
-        .bind(page_length);
+    query = query.bind(pos_filter.len() as u32).bind(format!("%{}%", crib)).bind(page * page_length).bind(page_length);
 
     let docs: Vec<Uuid> = query.map(|x| x.get("id")).fetch_all(pool).await?;
 
@@ -98,18 +99,18 @@ pub async fn create(
     extension: Option<String>,
     file: Option<String>,
 ) -> Result<Uuid> {
-    let id: Uuid = Uuid::now_v1(&get_mac_address()?.map(|x| x.bytes()).unwrap_or([0u8; 6]));
+    let id: Uuid = Uuid::now_v1(&get_mac_address()?.map(|x| x.bytes()).unwrap_or([0x69u8; 6]));
 
-    tokio::fs::create_dir(format!("{}/{}", get_filespider_directory()?, id)).await?;
+    tokio::fs::create_dir(get_document_directory(&id)?).await?;
 
     match file {
         Some(path) => tokio::fs::copy(
             path,
-            format!("{}/{}/{}", get_filespider_directory()?, id, id),
+            get_document_file(&id, &extension)?,
         ).await.map(|_| ()),
         None => {
             tokio::fs::write(
-                format!("{}/{}/{}", get_filespider_directory()?, id, id),
+                get_document_file(&id, &extension)?,
                 [0u8; 0],
             ).await
         }
@@ -133,7 +134,7 @@ pub async fn create(
 }
 
 pub async fn get_meta(pool: &SqlitePool, id: Uuid) -> Result<Meta> {
-    document_exists(id).await?;
+    document_exists(&id).await?;
 
     let doc_res = query!(
         "select title, type, added, file_extension from Document where id = ?",
@@ -148,7 +149,7 @@ pub async fn get_meta(pool: &SqlitePool, id: Uuid) -> Result<Meta> {
         tags,
         created: NaiveDateTime::from_timestamp_millis(doc_res.added).unwrap(),
         accessed: NaiveDateTime::from_timestamp_millis(
-            tokio::fs::metadata(format!("{}/{}/{}", get_filespider_directory()?, id, id)).await?.accessed()?.duration_since(UNIX_EPOCH)?.as_millis().try_into().unwrap(),
+            tokio::fs::metadata(get_document_file(&id, &doc_res.file_extension)?).await?.accessed()?.duration_since(UNIX_EPOCH)?.as_millis().try_into().unwrap(),
         ).unwrap(),
         id,
         extension: doc_res.file_extension,
@@ -161,7 +162,7 @@ pub async fn open_editor(
     editors: &mut HashMap<Uuid, tokio::process::Child>,
     id: Uuid,
 ) -> Result<bool> {
-    document_exists(id).await?;
+    document_exists(&id).await?;
 
     if let Some(editor) = editors.get_mut(&id) {
         if let Ok(Some(_)) = editor.try_wait() {
@@ -175,14 +176,14 @@ pub async fn open_editor(
 
     editors.insert(
         id,
-        Command::new(meta.doc_type.get_editor()).arg(format!("{}/{}/{}", get_filespider_directory()?, id, id)).spawn()?,
+        Command::new(meta.doc_type.get_editor().0).args(meta.doc_type.get_editor().1).arg(get_document_file(&meta.id, &meta.extension)?).spawn()?,
     );
 
     Ok(true)
 }
 
 pub async fn patch_meta(pool: &SqlitePool, id: Uuid, patch: MetaPatch) -> Result<()> {
-    document_exists(id).await?;
+    document_exists(&id).await?;
 
     match patch {
         MetaPatch::ChangeTitle(title) => {
@@ -209,7 +210,7 @@ pub async fn patch_meta(pool: &SqlitePool, id: Uuid, patch: MetaPatch) -> Result
 }
 
 pub async fn delete(pool: &SqlitePool, id: Uuid) -> Result<()> {
-    document_exists(id).await?;
+    document_exists(&id).await?;
 
     if query!(
         "delete from Document where id = ?; delete from Tag where document = ?",
@@ -219,7 +220,7 @@ pub async fn delete(pool: &SqlitePool, id: Uuid) -> Result<()> {
         return Err(eyre!("no rows affected"));
     }
 
-    tokio::fs::remove_dir_all(format!("{}/{}", get_filespider_directory()?, id)).await?;
+    tokio::fs::remove_dir_all(get_document_directory(&id)?).await?;
 
     Ok(())
 }

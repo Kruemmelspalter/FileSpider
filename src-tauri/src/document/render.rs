@@ -208,25 +208,16 @@ async fn execute_command(command: &str, args: Vec<&str>, current_dir: Option<&Pa
     match tokio::process::Command::new(command)
         .args(args)
         .current_dir(current_dir.unwrap_or(Path::new("/")))
-        .spawn() {
-        Ok(mut c) => {
-            match c.wait().await {
-                Ok(s) => {
-                    if s.success() {
-                        let mut s = String::new();
-                        if let Some(mut a) = c.stderr {
-                            a.read_to_string(&mut s).await?;
-                        }
-                        println!("{}", s);
-                        Ok(())
-                    } else {
-                        Err(eyre!("command exited with code != 0"))
-                    }
-                }
-                Err(e) => Err(e).wrap_err("waiting for command failed"),
+        .output().await {
+        Ok(s) => {
+            if s.status.success() {
+                Ok(())
+            } else {
+                Err(eyre!("Command {command} failed with exit code {}\n\nSTDOUT\n{}\n\nSTDERR\nP{}",
+                    s.status.code().unwrap_or(-1), std::str::from_utf8(&s.stdout)?, std::str::from_utf8(&s.stderr)?)) //.wrap_err("command exited with code != 0")
             }
         }
-        Err(e) => Err(e).wrap_err("spawning command failed"),
+        Err(e) => Err(e).wrap_err("waiting for command failed"),
     }
 }
 
@@ -326,9 +317,15 @@ impl Renderer for LaTeXRenderer {
         )
             .await?;
 
+<<<<<<< HEAD
         execute_command("pdflatex", vec!["-draftmode", "-halt-on-error", "in.tex"], Some(temp_path)).await?;
 
         execute_command("pdflatex", vec!["-halt-on-error", "in.tex"], Some(temp_path)).await?;
+=======
+        execute_command("pdflatex", vec!["-draftmode", "--interaction=nonstopmode", "-halt-on-error", "in.tex"], Some(temp_path)).await?;
+
+        execute_command("pdflatex", vec!["-halt-on-error", "--interaction=nonstopmode", "in.tex"], Some(temp_path)).await?;
+>>>>>>> d140048 (fix renderers n stuff)
 
         copy_into_cache(
             connection,

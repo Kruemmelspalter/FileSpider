@@ -1,0 +1,11 @@
+[tauri.allowlist.protocol]
+assetScope = [
+    "$HOME/.local/share/filespider/.cache/*",
+    "/var/lib/filespider/.cache/*"
+]
+
+[tauri.allowlist.fs]
+scope = [
+    "$HOME/.local/share/filespider/.cache/*",
+    "/var/lib/filespider/.cache/*"
+]

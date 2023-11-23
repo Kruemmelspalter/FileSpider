@@ -1,52 +1,398 @@
-<script setup lang="ts">
-// This starter template is using Vue 3 <script setup> SFCs
-// Check out https://vuejs.org/api/sfc-script-setup.html#script-setup
-import Greet from "./components/Greet.vue";
+<script lang="ts" setup>
+import {Ref, ref, watch} from "vue";
+import {computedAsync} from "@vueuse/core";
+
+import {invoke} from "@tauri-apps/api";
+import {convertFileSrc} from "@tauri-apps/api/tauri";
+import {VTextField} from "vuetify/components";
+import {readTextFile} from "@tauri-apps/api/fs";
+import TauriFileInput from "./components/TauriFileInput.vue";
+
+type DocMeta = {
+  id: string,
+  title: string,
+  docType: string,
+  created: string,
+  accessed: string,
+  tags: string[],
+  extension: string | undefined,
+}
+
+const id = ref<string | undefined>("b69e86d8-88c0-11ee-ad1d-6c0b843e3b00");
+
+const meta = computedAsync<DocMeta | undefined>(async () =>
+    <DocMeta | undefined>(await invoke('plugin:document|get_meta', {id: id.value})
+        .catch(error => {
+          addAlert("Error while fetching document meta", <string>error, "error", true, 10000)
+          return undefined
+        })), undefined);
+
+const rendered = computedAsync<[string, string] | undefined>(async () =>
+    <[string, string] | undefined>(await invoke('plugin:document|render', {id: id.value}).catch(error => {
+      addAlert("Error while rendering document", <string>error, "error", true, 10000);
+    })), undefined);
+
+const fullscreen = ref(false);
+
+function toggleFullscreen() {
+  fullscreen.value = !fullscreen.value;
+}
+
+const workingTitle = ref<string | undefined>(undefined);
+
+watch(meta, (final: DocMeta | undefined) => {
+  workingTitle.value = final?.title
+})
+
+watch(workingTitle, async (final: string | undefined) => {
+  if (final === undefined || meta.value === undefined) return;
+  if (final === meta.value?.title) return;
+  if (final.trim() === "") return;
+  await invoke('plugin:document|alter_meta', {id: id.value, patch: {"ChangeTitle": final}});
+})
+
+function triggerMetaUpdate() {
+  let x = id.value;
+  id.value = "";
+  id.value = x;
+}
+
+async function removeTag(tag: string) {
+  await invoke('plugin:document|alter_meta', {id: id.value, patch: {"RemoveTag": tag}})
+      .then(() => {
+        addAlert(undefined, `Tag '${tag}' removed`, "success", true, 1000);
+        triggerMetaUpdate();
+      })
+      .catch(error => {
+        addAlert(`Error while removing tag '${tag}'`, <string>error, "error", true, 10000)
+      });
+
+
+}
+
+const plainContent = ref("");
+watch(rendered, async () => {
+  if (rendered.value === undefined) {
+    return;
+  }
+  switch (rendered.value[1]) {
+    case "Plain":
+      plainContent.value = await readTextFile(rendered.value?.[0]);
+      break;
+    case "Pdf":
+      if (pdfViewer.value === null) return;
+      // noinspection SillyAssignmentJS
+      pdfViewer.value.data = pdfViewer.value.data;
+      break;
+    default:
+      break;
+  }
+});
+
+const sidebarIsOpen = ref(true);
+const addTagDialog = ref(false);
+const newTag = ref("");
+
+async function addTag() {
+  if (newTag.value.trim() === "") return;
+  await invoke('plugin:document|alter_meta', {
+    id: id.value,
+    patch: {"AddTag": newTag.value.trim()}
+  })
+      .then(() => addAlert(undefined, `Tag '${newTag.value.trim()}' added`, "success", true, 1000))
+      .catch(error => {
+        addAlert(`Error while adding tag '${newTag.value.trim()}'`, <string>error, "error", true, 10000)
+      });
+
+
+  triggerMetaUpdate();
+
+  newTag.value = "";
+  addTagDialog.value = false;
+}
+
+const alerts:
+    Ref<[string | undefined, string, "error" | "success" | "warning" | "info" | undefined, boolean][]>
+    = ref([]);
+const deleteSheet = ref(false);
+
+
+function addAlert(title: string | undefined, content: string, type: "error" | "success" | "warning" | "info" | undefined, closable: boolean, timeout: number | undefined) {
+  let val: [string | undefined, string, "error" | "success" | "warning" | "info" | undefined, boolean] = [title, content, type, closable];
+  alerts.value.push(val)
+  if (timeout !== undefined)
+    setTimeout(() => alerts.value.splice(alerts.value.indexOf(val), 1), timeout);
+  return val
+}
+
+async function deleteDocument() {
+  await invoke('plugin:document|delete', {id: id.value})
+      .then(() => {
+        addAlert(undefined, "Document deleted", "success", true, 1000)
+        // TODO redirect to home
+      })
+      .catch(error =>
+          addAlert("Error while deleting document", <string>error, "error", true, 10000)
+      );
+}
+
+const createDialog = ref(false);
+const createTab = ref("create");
+
+const createValid = ref(false);
+
+const createData = ref<{
+  title: string,
+  tags: string[],
+  file: string | undefined,
+  tagSearch: string,
+  docType: "Plain" | "Html" | "Markdown" | "LaTeX" | "XournalPP",
+  extension: string,
+}>({title: "", tags: [], file: undefined, tagSearch: "", docType: "Plain", extension: ""});
+
+const createSuggestTags = computedAsync<string[]>(async () => {
+  if (createData.value.tagSearch.trim() === '') return [];
+  return <string[]>(await invoke('plugin:document|get_tags', {crib: createData.value.tagSearch})
+      .catch(error =>
+          addAlert("Error while fetching tag suggestions", <string>error, "error", true, 10000)
+      ) || [])
+}, []);
+
+async function createDocument() {
+  if (createTab.value === "create") {
+    console.log(createData.value.file);
+    // noinspection ES6MissingAwait
+    await (<Promise<string>>invoke('plugin:document|create', {
+      title: createData.value.title,
+      tags: createData.value.tags,
+      docType: createData.value.docType,
+      extension: createData.value.extension === "" ? undefined : createData.value.extension,
+      file: createData.value.file
+    }))
+        .then((newId: string) => {
+          addAlert(undefined, "Document created", "success", true, 1000)
+          id.value = newId;
+          createDialog.value = false;
+        })
+        .catch(error =>
+            addAlert("Error while creating document", <string>error, "error", true, 10000)
+        );
+  } else if (createTab.value === "import") {
+
+    // noinspection ES6MissingAwait
+    await (<Promise<string>>invoke('plugin:document|import_pdf', {
+      title: createData.value.title,
+      tags: createData.value.tags,
+      file: createData.value.file
+    }))
+        .then((newId: string) => {
+          addAlert(undefined, "Document imported", "success", true, 1000)
+          id.value = newId;
+          createDialog.value = false;
+        })
+        .catch(error =>
+            addAlert("Error while importing document", <string>error, "error", true, 10000)
+        );
+  }
+}
+
+const posTagsSearch = ref("");
+const posTagsSuggestions = computedAsync<string[]>(async () => {
+  if (posTagsSearch.value.trim() === '') return [];
+  return <string[]>(await invoke('plugin:document|get_tags', {crib: posTagsSearch.value})
+      .catch(error =>
+          addAlert("Error while fetching tag suggestions", <string>error, "error", true, 10000)
+      ) || [])
+}, []);
+
+const negTagsSearch = ref("");
+const negTagsSuggestions = computedAsync<string[]>(async () => {
+  if (negTagsSearch.value.trim() === '') return [];
+  return <string[]>(await invoke('plugin:document|get_tags', {crib: negTagsSearch.value})
+      .catch(error =>
+          addAlert("Error while fetching tag suggestions", <string>error, "error", true, 10000)
+      ) || [])
+}, []);
+
+const posTags = ref<string[]>([]);
+const negTags = ref<string[]>([]);
+const titleCrib = ref<string>("");
+
+const searchValid = ref(false);
+
+const searchResults = ref<DocMeta[]>([]);
+
+async function search() {
+  await invoke('plugin:document|search', {
+    posFilter: posTags.value,
+    negFilter: negTags.value,
+    crib: titleCrib.value,
+    page: 0,
+    pageLength: 10,
+    sort: ["CreationTime", false]
+  })
+      .catch(error =>
+          addAlert("Error while searching", <string>error, "error", true, 10000)
+      ).then(res => searchResults.value = <DocMeta[]>res)
+}
+
+async function openEditor() {
+  await invoke('plugin:document|open_editor', {id: id.value})
+      .catch(error =>
+          addAlert("Error while opening editor", <string>error, "error", true, 10000)
+      );
+}
+
+const pdfViewer = ref<HTMLObjectElement | null>(null)
 </script>
 
 <template>
-  <div class="container">
-    <h1>Welcome to Tauri!</h1>
-
-    <div class="row">
-      <a href="https://vitejs.dev" target="_blank">
-        <img src="/vite.svg" class="logo vite" alt="Vite logo" />
-      </a>
-      <a href="https://tauri.app" target="_blank">
-        <img src="/tauri.svg" class="logo tauri" alt="Tauri logo" />
-      </a>
-      <a href="https://vuejs.org/" target="_blank">
-        <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-      </a>
+  <v-app id="filespider">
+    <div class="position-fixed " style="bottom: 2vh; right: 2vh; max-width: 50vw">
+      <!--suppress TypeScriptValidateTypes -->
+      <v-alert v-for="alert in alerts" key="alert" :closable="alert[3]" :text="alert[1]" :title="alert[0]"
+               :type="alert[2]"
+               class="my-2">
+      </v-alert>
     </div>
 
-    <p>Click on the Tauri, Vite, and Vue logos to learn more.</p>
+    <v-navigation-drawer v-model="sidebarIsOpen">
+      <v-form v-model="searchValid" class="pa-2" @submit.prevent="search">
+        <v-combobox v-model="posTags"
+                    v-model:search="posTagsSearch" :items="posTagsSuggestions" :rules="[v => v.length !== 0]" chips=""
+                    clearable="" density="compact" label="Positive Tags" multiple="" outlined/>
+        <v-combobox v-model="negTags" v-model:search="negTagsSearch"
+                    :items="negTagsSuggestions" chips="" clearable="" density="compact" label="Negative Tags"
+                    multiple="" outlined/>
+        <v-text-field v-model="titleCrib" label="Title Crib" outlined/>
+        <v-btn :disabled="!searchValid" color="primary" type="submit">Search</v-btn>
+      </v-form>
+      <v-divider :thickness="2" class="border-opacity-75"/>
+      <!-- TODO -->
+      <v-list>
+        <v-list-item
+            v-for="r in searchResults"
+            :key="r.id"
+            :title="r.title"
+            @click="id = r.id"
+        >
 
-    <p>
-      Recommended IDE setup:
-      <a href="https://code.visualstudio.com/" target="_blank">VS Code</a>
-      +
-      <a href="https://github.com/johnsoncodehk/volar" target="_blank">Volar</a>
-      +
-      <a href="https://github.com/tauri-apps/tauri-vscode" target="_blank"
-        >Tauri</a
-      >
-      +
-      <a href="https://github.com/rust-lang/rust-analyzer" target="_blank"
-        >rust-analyzer</a
-      >
-    </p>
+          <v-chip-group>
+            <v-chip
+                v-for="t in r.tags"
+                :key="t"
+                small
+                @click="posTags = [t]; negTags=[]; titleCrib=''; search()"
+            >
+              {{ t }}
+            </v-chip>
+          </v-chip-group>
 
-    <Greet />
-  </div>
+        </v-list-item>
+      </v-list>
+    </v-navigation-drawer>
+
+    <v-system-bar class="py-3" color="primary">
+
+      <v-icon v-if="!sidebarIsOpen" class="mx-1" icon="fas fa-bars" @click="sidebarIsOpen = !sidebarIsOpen"/>
+
+      <v-spacer/>
+
+      <v-icon :icon="`fas fa-${fullscreen ? 'compress' : 'expand'}`" class="mx-1" @click="toggleFullscreen"/>
+
+      <i class="mx-2"/>
+
+      <v-icon class="mx-1" icon="fas fa-file-circle-plus" @click="createDialog = true; createTab='create'"/>
+      <v-icon class="mx-1" icon="fas fa-file-import" @click="createDialog = true; createTab='import'"/>
+
+      <i class="mx-2"/>
+
+      <v-icon class="mx-1" icon="fas fa-file-pen" @click="openEditor"/>
+      <v-icon class="mx-1" icon="fas fa-rotate-right" @click="triggerMetaUpdate"/>
+      <v-icon class="mx-1" icon="fas fa-file-export" @click=""/>
+      <v-icon class="mx-1" icon="fas fa-trash" @click="deleteSheet = true;"/>
+    </v-system-bar>
+
+    <v-main>
+      <v-container fluid="" style="height: calc(100vh - 24px)">
+        <div v-if="!fullscreen">
+          <v-text-field v-model="workingTitle" variant="underlined"></v-text-field>
+          <v-chip-group>
+            <v-chip v-for="t in meta?.tags" :key="t" class="pr-1"
+                    @click="posTags = [t]; negTags = []; titleCrib=''; search()">
+              {{ t }}
+              <v-icon class="ml-2" icon="fas fa-circle-xmark" @click="removeTag(t)"/>
+            </v-chip>
+
+            <v-chip class="pa-3" prepend-icon="fas fa-plus"
+                    @click="addTagDialog = true">
+
+              <v-text-field v-if="addTagDialog" v-model="newTag" autofocus="" class="my-2"
+                            density="compact" single-line="" style="width: 200px"
+                            variant="underlined" @blur="addTagDialog = false" @keydown.enter="addTag"/>
+            </v-chip>
+          </v-chip-group>
+        </div>
+
+        <v-container :style="{overflow: 'scroll', height: fullscreen ? '100%' : '89%'}" fluid="">
+          <pre v-if="rendered?.[1] === 'Plain'" v-text="plainContent"/>
+          <object v-else-if="rendered?.[1] === 'Pdf'" ref="pdfViewer" :data="convertFileSrc(<string>rendered?.[0])"
+                  class="w-100 h-100" type="application/pdf"/>
+          <object v-else-if="rendered?.[1] === 'Html' " :data="convertFileSrc(<string>rendered?.[0])" type="text/html"/>
+        </v-container>
+
+        <v-bottom-sheet v-model="deleteSheet">
+          <v-btn color="error" @click="deleteDocument">
+            DELETE
+          </v-btn>
+        </v-bottom-sheet>
+
+        <v-dialog v-model="createDialog" width="35vw">
+          <v-card>
+            <v-tabs
+                v-model="createTab"
+                bg-color="primary"
+            >
+              <v-tab value="create">Create new</v-tab>
+              <v-tab value="import">Import PDF to XOPP</v-tab>
+            </v-tabs>
+            <v-form v-if="createTab === 'create'" v-model="createValid" class="pa-4">
+              <v-text-field v-model="createData.title" :rules="[v => v.trim() !== '']" label="Title"
+                            outlined></v-text-field>
+              <v-combobox v-model="createData.tags" v-model:search="createData.tagSearch" :items="createSuggestTags"
+                          :rules="[v => v.length !== 0]"
+                          chips="" clearable="" density="compact" label="Tags" multiple=""
+                          outlined></v-combobox>
+              <v-select v-model="createData.docType" :items="['Plain', 'Markdown', 'LaTeX', 'XournalPP']"
+                        label="Document type"
+                        outlined/>
+              <v-combobox v-model="createData.extension" :items="['xopp', 'tex', 'md', 'txt', 'html']"
+                          label="Extension (without leading dot)"
+                          outlined/>
+              <tauri-file-input v-model="createData.file" btn-text="Choose File"/>
+            </v-form>
+            <v-form v-else-if="createTab === 'import'" v-model="createValid" class="pa-4">
+              <v-text-field v-model="createData.title" :rules="[v => v.trim() !== '']" label="Title"
+                            outlined></v-text-field>
+              <v-combobox v-model="createData.tags" v-model:search="createData.tagSearch" :items="createSuggestTags"
+                          :rules="[v => v.length !== 0]" chips=""
+                          clearable="" label="Tags" multiple=""
+                          outlined></v-combobox>
+              <tauri-file-input v-model="createData.file" btn-text="Choose File"/>
+            </v-form>
+            <v-card-actions>
+              <v-spacer/>
+              <v-btn :disabled="!createValid || (createData.file === undefined && createTab === 'import')"
+                     @click="createDocument">{{
+                  createTab !== 'import' ? 'Create' : 'Import'
+                }}
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+      </v-container>
+    </v-main>
+  </v-app>
 </template>
 
-<style scoped>
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #249b73);
-}
-</style>
+<style scoped></style>

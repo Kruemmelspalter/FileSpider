@@ -214,7 +214,7 @@ async fn execute_command(command: &str, args: Vec<&str>, current_dir: Option<&Pa
                 Ok(())
             } else {
                 Err(eyre!("Command {command} failed with exit code {}\n\nSTDOUT\n{}\n\nSTDERR\nP{}",
-                    s.status.code().unwrap_or(-1), std::str::from_utf8(&s.stdout)?, std::str::from_utf8(&s.stderr)?)) //.wrap_err("command exited with code != 0")
+                    s.status.code().unwrap_or(-1), unsafe {std::str::from_utf8_unchecked(&s.stdout)}, unsafe{std::str::from_utf8_unchecked(&s.stderr)}))
             }
         }
         Err(e) => Err(e).wrap_err("waiting for command failed"),

@@ -14,7 +14,7 @@ use eyre::WrapErr;
 use fasthash::{FastHasher, SpookyHasher};
 use sqlx::{query, SqliteConnection, SqlitePool};
 use tokio::{sync::Mutex, task::JoinHandle};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 
 use crate::{
@@ -33,8 +33,7 @@ pub async fn hash_document_files(id: Uuid) -> Result<Hash> {
     hash_file(
         &mut hasher,
         PathBuf::from(get_document_directory(&id)?),
-    )
-        .await?;
+    ).await?;
     Ok(hasher.finish())
 }
 
@@ -74,10 +73,7 @@ pub async fn render(
                 "select render_type from Cache where document = ? and hash = unhex(?)",
                 id,
                 hex_hash
-            )
-                .map(|r| RenderType::from_str(r.render_type.as_str()))
-                .fetch_one(pool)
-                .await??,
+            ).map(|r| RenderType::from_str(r.render_type.as_str())).fetch_one(pool).await??,
         );
     }
 
@@ -87,11 +83,7 @@ pub async fn render(
         "select render_type from Cache where document = ? and hash = unhex(?)",
         id,
         hex_hash
-    )
-        .map(|r| r.render_type)
-        .fetch_optional(pool)
-        .await?
-    {
+    ).map(|r| r.render_type).fetch_optional(pool).await? {
         return get_from_cache(id, RenderType::from_str(render_type.as_str())?);
     }
 
@@ -118,10 +110,7 @@ pub async fn render(
             "select render_type from Cache where document = ? and hash = unhex(?)",
             id,
             hex_hash
-        )
-            .map(|r| RenderType::from_str(r.render_type.as_str()))
-            .fetch_one(pool)
-            .await??,
+        ).map(|r| RenderType::from_str(r.render_type.as_str())).fetch_one(pool).await??,
     )
 }
 
@@ -132,21 +121,9 @@ fn get_from_cache(id: Uuid, render_type: RenderType) -> Result<(String, RenderTy
 async fn render_task(meta: Meta, hash: Hash, mut connection: SqliteConnection) {
     let renderer = get_renderer_from_doc_type(&meta.doc_type);
     if let Err(e) = renderer.render(meta.id, hash, &mut connection, &meta).await {
-        tokio::fs::File::options()
-            .append(true)
-            .create(true)
-            .open(get_cache_file(meta.id).unwrap())
-            .await
-            .unwrap()
-            .write(format!("{:#?}", e).as_bytes())
-            .await
-            .unwrap();
-        tokio::fs::write(get_cache_file(meta.id).unwrap(), e.to_string())
-            .await
-            .unwrap();
-        insert_into_cache(&mut connection, meta.id, hash, RenderType::Plain)
-            .await
-            .unwrap();
+        tokio::fs::File::options().append(true).create(true).open(get_cache_file(meta.id).unwrap()).await.unwrap().write(format!("{:#?}", e).as_bytes()).await.unwrap();
+        tokio::fs::write(get_cache_file(meta.id).unwrap(), e.to_string()).await.unwrap();
+        insert_into_cache(&mut connection, meta.id, hash, RenderType::Plain).await.unwrap();
         println!("{:#?}", e);
     };
 }
@@ -167,8 +144,7 @@ async fn insert_into_cache<'a>(
         render_str,
         hex_hash,
         render_str
-    )
-        .execute(connection).await?;
+    ).execute(connection).await?;
     Ok(())
 }
 
@@ -194,10 +170,7 @@ fn get_renderer_from_doc_type(doc_type: &DocType) -> Box<dyn Renderer + Send + S
 }
 
 async fn copy_into_tempdir(id: &Uuid, temp_path: &Path) -> Result<()> {
-    if tokio::process::Command::new("bash")
-        .args(vec!["-c", &format!("cp {}/* {}", get_document_directory(id)?, temp_path.to_str().unwrap())])
-        .spawn()?
-        .wait().await?.success() {
+    if tokio::process::Command::new("bash").args(vec!["-c", &format!("cp {}/* {}", get_document_directory(id)?, temp_path.to_str().unwrap())]).spawn()?.wait().await?.success() {
         Ok(())
     } else {
         Err(eyre!("copying exited with code != 0"))
@@ -205,10 +178,7 @@ async fn copy_into_tempdir(id: &Uuid, temp_path: &Path) -> Result<()> {
 }
 
 async fn execute_command(command: &str, args: Vec<&str>, current_dir: Option<&Path>) -> Result<()> {
-    match tokio::process::Command::new(command)
-        .args(args)
-        .current_dir(current_dir.unwrap_or(Path::new("/")))
-        .output().await {
+    match tokio::process::Command::new(command).args(args).current_dir(current_dir.unwrap_or(Path::new("/"))).output().await {
         Ok(s) => {
             if s.status.success() {
                 Ok(())
@@ -249,8 +219,7 @@ impl Renderer for PlainRenderer {
             hash,
             get_document_file(&meta.id, &meta.extension)?,
             RenderType::Plain,
-        )
-            .await?;
+        ).await?;
         Ok(())
     }
 }
@@ -274,8 +243,7 @@ impl Renderer for MarkdownRenderer {
         tokio::fs::rename(
             temp_path.join(get_document_basename(&meta.id, &meta.extension)),
             temp_path.join("in.md"),
-        )
-            .await?;
+        ).await?;
 
         execute_command("pandoc", vec!["in.md", "-o", "out.html", "-s"], Some(temp_path)).await?;
 
@@ -285,8 +253,7 @@ impl Renderer for MarkdownRenderer {
             hash,
             temp_path.join("out.html"),
             RenderType::Html,
-        )
-            .await?;
+        ).await?;
 
         drop(temp_dir);
 
@@ -314,18 +281,12 @@ impl Renderer for LaTeXRenderer {
         tokio::fs::rename(
             temp_path.join(get_document_basename(&meta.id, &meta.extension)),
             temp_path.join("in.tex"),
-        )
-            .await?;
+        ).await?;
 
-<<<<<<< HEAD
-        execute_command("pdflatex", vec!["-draftmode", "-halt-on-error", "in.tex"], Some(temp_path)).await?;
 
-        execute_command("pdflatex", vec!["-halt-on-error", "in.tex"], Some(temp_path)).await?;
-=======
         execute_command("pdflatex", vec!["-draftmode", "--interaction=nonstopmode", "-halt-on-error", "in.tex"], Some(temp_path)).await?;
 
         execute_command("pdflatex", vec!["-halt-on-error", "--interaction=nonstopmode", "in.tex"], Some(temp_path)).await?;
->>>>>>> d140048 (fix renderers n stuff)
 
         copy_into_cache(
             connection,
@@ -333,8 +294,7 @@ impl Renderer for LaTeXRenderer {
             hash,
             temp_path.join("in.pdf"),
             RenderType::Pdf,
-        )
-            .await?;
+        ).await?;
 
         drop(temp_dir);
 
@@ -361,8 +321,7 @@ impl Renderer for XournalPPRenderer {
         tokio::fs::rename(
             temp_path.join(get_document_basename(&meta.id, &meta.extension)),
             temp_path.join("in.xopp"),
-        )
-            .await?;
+        ).await?;
 
         // if !tokio::process::Command::new("sh")
         //     .arg("-c")
@@ -385,8 +344,7 @@ impl Renderer for XournalPPRenderer {
             hash,
             temp_path.join("out.pdf"),
             RenderType::Pdf,
-        )
-            .await?;
+        ).await?;
 
         Ok(())
     }

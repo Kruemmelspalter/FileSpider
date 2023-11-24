@@ -38,7 +38,7 @@ async function openFileChooser() {
       {{ btnText }}
     </v-btn>
     <span v-if="modelValue" class="ma-1" v-text="modelValue?.split('/')?.pop()"/>
-    <v-icon v-if="modelValue" class="ma-1" icon="fas fa-xmark-circle" @click="modelValue = undefined"/>
+    <v-icon v-if="modelValue" class="ma-1" icon="fas fa-xmark-circle" @click="$emit('update:model-value', undefined)"/>
   </div>
 </template>
 

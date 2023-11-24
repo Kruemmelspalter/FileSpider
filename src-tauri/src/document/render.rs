@@ -282,8 +282,7 @@ impl Renderer for LaTeXRenderer {
             temp_path.join(get_document_basename(&meta.id, &meta.extension)),
             temp_path.join("in.tex"),
         ).await?;
-
-
+        
         execute_command("pdflatex", vec!["-draftmode", "--interaction=nonstopmode", "-halt-on-error", "in.tex"], Some(temp_path)).await?;
 
         execute_command("pdflatex", vec!["-halt-on-error", "--interaction=nonstopmode", "in.tex"], Some(temp_path)).await?;

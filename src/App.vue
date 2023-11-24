@@ -243,7 +243,14 @@ async function openEditor() {
       );
 }
 
-const pdfViewer = ref<HTMLObjectElement | null>(null)
+const pdfViewer = ref<HTMLObjectElement | null>(null);
+
+async function showRenderInExplorer() {
+  await invoke('plugin:document|show_render_in_explorer', {id: id.value})
+      .catch(error =>
+          addAlert("Error while opening file explorer", <string>error, "error", true, 10000)
+      );
+}
 </script>
 
 <template>
@@ -309,7 +316,7 @@ const pdfViewer = ref<HTMLObjectElement | null>(null)
 
       <v-icon class="mx-1" icon="fas fa-file-pen" @click="openEditor"/>
       <v-icon class="mx-1" icon="fas fa-rotate-right" @click="triggerMetaUpdate"/>
-      <v-icon class="mx-1" icon="fas fa-file-export" @click=""/>
+      <v-icon class="mx-1" icon="fas fa-file-export" @click="showRenderInExplorer"/>
       <v-icon class="mx-1" icon="fas fa-trash" @click="deleteSheet = true;"/>
     </v-system-bar>
 

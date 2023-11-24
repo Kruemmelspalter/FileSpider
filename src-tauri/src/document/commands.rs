@@ -99,6 +99,18 @@ pub async fn get_tags(
     document::get_tags(&*state.pool.lock().await, crib).await.map_err(|x| format!("{x:#?}"))
 }
 
+#[tauri::command]
+pub async fn show_render_in_explorer(
+    state: State<'_, FilespiderState>,
+    id: Uuid,
+) -> Result<(), String> {
+    document::show_render_in_explorer(
+        &*state.pool.lock().await,
+        &mut *state.renderers.lock().await,
+        id,
+    ).await.map_err(|x| format!("{x:#?}"))
+}
+
 pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
     PluginBuilder::new("document").invoke_handler(tauri::generate_handler![
             search,
@@ -108,6 +120,7 @@ pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
             open_editor,
             alter_meta,
             delete,
-            get_tags
+            get_tags,
+            show_render_in_explorer,
         ]).build()
 }

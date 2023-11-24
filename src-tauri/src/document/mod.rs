@@ -13,10 +13,13 @@ use sqlx::{
     SqlitePool,
 };
 use tokio::process::Command;
+use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 use crate::directories::get_cache_directory;
 use crate::directories::get_filespider_directory;
+use crate::document::render::Hash;
 use crate::types::*;
 
 pub mod commands;
@@ -230,4 +233,57 @@ pub async fn get_tags(pool: &SqlitePool, crib: String) -> Result<Vec<String>> {
         "select distinct tag from Tag where tag like '%' || ? || '%'",
         crib
     ).map(|x| x.tag).fetch_all(pool).await?)
+}
+
+pub async fn show_render_in_explorer(
+    pool: &SqlitePool,
+    renderers: &mut HashMap<(Uuid, Hash), Mutex<JoinHandle<()>>>,
+    id: Uuid,
+) -> Result<()> {
+    document_exists(&id).await?;
+
+    // let meta = get_meta(pool, id).await?;
+
+    let render = render::render(pool, renderers, id).await?;
+
+    #[cfg(target_os = "linux")]
+    {
+        use dbus_tokio::connection;
+        use dbus::nonblock;
+        use std::time::Duration;
+
+        let (resource, conn) = connection::new_session_sync()?;
+
+        let _handle = tokio::spawn(async {
+            let err = resource.await;
+            panic!("Lost connection to D-Bus: {}", err);
+        });
+
+        let proxy = nonblock::Proxy::new("org.freedesktop.FileManager1", "/org/freedesktop/FileManager1", Duration::from_secs(2), conn);
+
+        proxy.method_call("org.freedesktop.FileManager1",
+                          "ShowItems",
+                          (vec![format!("file://{}", render.0)], ""),
+        ).await?;
+    }
+
+    #[cfg(target_os = "windows")]
+    unsafe {
+        use windows::Win32::{Foundation::PCSTR, UI::Shell::{shellExecuteA, SW_SHOW}};
+        ShellExecuteA(
+            None,
+            PCSTR::null(),
+            PCSTR::from_raw(&render.0.as_bytes()),
+            PCSTR::null(),
+            PCSTR::null(),
+            SW_SHOW,
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open").args(vec!["-R", render.0]).spawn()?;
+    }
+
+    Ok(())
 }

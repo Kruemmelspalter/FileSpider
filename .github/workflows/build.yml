@@ -1,11 +1,11 @@
 name: Build
-on: [push]
+on: [ push ]
 jobs:
   build:
     strategy:
       matrix:
-        rust: [stable, nightly]
-        os: [ubuntu-latest, ] # windows-latest]
+        rust: [ stable, nightly ]
+        os: [ ubuntu-latest, windows-latest ]
     
     defaults:
       run:
@@ -37,8 +37,8 @@ jobs:
             ${{ steps.versions.outputs.yarncachedir }}
           key: yarn-${{ runner.os }}-${{ hashFiles('**/yarn.lock')}}
 
-      # - uses: e-t-l/setup-mingw@patch-1
-        # with:
+          # - uses: e-t-l/setup-mingw@patch-1
+          # with:
           # platform: x64
         # if: matrix.os == 'windows-latest'
       - uses: GuillaumeFalourd/setup-windows10-sdk-action@v1.11
@@ -58,7 +58,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
 
       - uses: rui314/setup-mold@v1
-        
+
 
       - run: cargo install tauri-cli
         if: steps.rust-cache.outputs.cache-hit != 'true'

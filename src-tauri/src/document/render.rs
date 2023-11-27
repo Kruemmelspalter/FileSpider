@@ -11,7 +11,6 @@ use async_trait::async_trait;
 use eyre::eyre;
 use eyre::Result;
 use eyre::WrapErr;
-use fasthash::{FastHasher, SpookyHasher};
 use sqlx::{query, SqliteConnection, SqlitePool};
 use tokio::{sync::Mutex, task::JoinHandle};
 use tokio::io::AsyncWriteExt;
@@ -29,7 +28,7 @@ pub type Hash = u64;
 pub async fn hash_document_files(id: Uuid) -> Result<Hash> {
     document::document_exists(&id).await?;
 
-    let mut hasher = fasthash::SpookyHasher::new();
+    let mut hasher = fxhash::FxHasher::default();
     hash_file(
         &mut hasher,
         PathBuf::from(get_document_directory(&id)?),
@@ -38,7 +37,7 @@ pub async fn hash_document_files(id: Uuid) -> Result<Hash> {
 }
 
 #[async_recursion]
-async fn hash_file(hasher: &mut SpookyHasher, path: PathBuf) -> Result<()> {
+async fn hash_file(hasher: &mut fxhash::FxHasher, path: PathBuf) -> Result<()> {
     let meta = tokio::fs::metadata(&path).await?;
 
     if meta.is_dir() {
@@ -60,8 +59,7 @@ pub async fn render(
 ) -> Result<(String, RenderType)> {
     document::document_exists(&id).await?;
     let hash = hash_document_files(id).await?;
-    let hex_hash = format!("{:16x}", hash);
-    dbg!(&hex_hash);
+    let hex_hash = format!("{:016x}", hash);
 
     if let Some(handle) = renderers.get(&(id, hash)) {
         if !handle.lock().await.is_finished() {
@@ -124,7 +122,6 @@ async fn render_task(meta: Meta, hash: Hash, mut connection: SqliteConnection) {
         tokio::fs::File::options().append(true).create(true).open(get_cache_file(meta.id).unwrap()).await.unwrap().write(format!("{:#?}", e).as_bytes()).await.unwrap();
         tokio::fs::write(get_cache_file(meta.id).unwrap(), e.to_string()).await.unwrap();
         insert_into_cache(&mut connection, meta.id, hash, RenderType::Plain).await.unwrap();
-        println!("{:#?}", e);
     };
 }
 
@@ -134,7 +131,7 @@ async fn insert_into_cache<'a>(
     hash: Hash,
     render_type: RenderType,
 ) -> Result<()> {
-    let hex_hash = format!("{:16x}", hash);
+    let hex_hash = format!("{:016x}", hash);
     let render_str = render_type.to_string();
 
     query!(
@@ -272,7 +269,6 @@ impl Renderer for LaTeXRenderer {
         connection: &mut SqliteConnection,
         meta: &Meta,
     ) -> Result<()> {
-        dbg!("rendering via latex");
         let temp_dir = tempfile::tempdir()?;
         let temp_path = temp_dir.path();
 
@@ -282,7 +278,7 @@ impl Renderer for LaTeXRenderer {
             temp_path.join(get_document_basename(&meta.id, &meta.extension)),
             temp_path.join("in.tex"),
         ).await?;
-        
+
         execute_command("pdflatex", vec!["-draftmode", "--interaction=nonstopmode", "-halt-on-error", "in.tex"], Some(temp_path)).await?;
 
         execute_command("pdflatex", vec!["-halt-on-error", "--interaction=nonstopmode", "in.tex"], Some(temp_path)).await?;

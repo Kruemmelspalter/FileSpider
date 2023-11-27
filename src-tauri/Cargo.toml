@@ -34,7 +34,7 @@ sqlx = { version = "0.7.2", features = [
 ] }
 mac_address = { version = "1.1.5", features = ["serde"] }
 futures = "0.3.28"
-fasthash = "0.4.0"
+fxhash = { version = "0.2.1", features = [] }
 async-recursion = "1.0.5"
 async-trait = "0.1.74"
 tempfile = "3.8.0"

@@ -266,11 +266,11 @@ async function showRenderInExplorer() {
     <v-navigation-drawer v-model="sidebarIsOpen">
       <v-form v-model="searchValid" class="pa-2" @submit.prevent="search">
         <v-combobox v-model="posTags"
-                    v-model:search="posTagsSearch" :items="posTagsSuggestions" :rules="[v => v.length !== 0]" chips=""
-                    clearable="" density="compact" label="Positive Tags" multiple="" outlined/>
+                    v-model:search="posTagsSearch" :items="posTagsSuggestions" :rules="[v => v.length !== 0]" chips
+                    clearable density="compact" label="Positive Tags" multiple outlined/>
         <v-combobox v-model="negTags" v-model:search="negTagsSearch"
-                    :items="negTagsSuggestions" chips="" clearable="" density="compact" label="Negative Tags"
-                    multiple="" outlined/>
+                    :items="negTagsSuggestions" chips clearable density="compact" label="Negative Tags"
+                    multiple outlined/>
         <v-text-field v-model="titleCrib" label="Title Crib" outlined/>
         <v-btn :disabled="!searchValid" color="primary" type="submit">Search</v-btn>
       </v-form>
@@ -321,7 +321,7 @@ async function showRenderInExplorer() {
     </v-system-bar>
 
     <v-main>
-      <v-container fluid="" style="height: calc(100vh - 24px)">
+      <v-container fluid style="height: calc(100vh - 24px)">
         <div v-if="!fullscreen">
           <v-text-field v-model="workingTitle" variant="underlined"></v-text-field>
           <v-chip-group>
@@ -334,14 +334,14 @@ async function showRenderInExplorer() {
             <v-chip class="pa-3" prepend-icon="fas fa-plus"
                     @click="addTagDialog = true">
 
-              <v-text-field v-if="addTagDialog" v-model="newTag" autofocus="" class="my-2"
-                            density="compact" single-line="" style="width: 200px"
+              <v-text-field v-if="addTagDialog" v-model="newTag" autofocus class="my-2"
+                            density="compact" single-line style="width: 200px"
                             variant="underlined" @blur="addTagDialog = false" @keydown.enter="addTag"/>
             </v-chip>
           </v-chip-group>
         </div>
 
-        <v-container :style="{overflow: 'scroll', height: fullscreen ? '100%' : '89%'}" fluid="">
+        <v-container :style="{overflow: 'scroll', height: fullscreen ? '100%' : '89%'}" fluid>
           <pre v-if="rendered?.[1] === 'Plain'" v-text="plainContent"/>
           <object v-else-if="rendered?.[1] === 'Pdf'" ref="pdfViewer" :data="convertFileSrc(<string>rendered?.[0])"
                   class="w-100 h-100" type="application/pdf"/>
@@ -368,7 +368,7 @@ async function showRenderInExplorer() {
                             outlined></v-text-field>
               <v-combobox v-model="createData.tags" v-model:search="createData.tagSearch" :items="createSuggestTags"
                           :rules="[v => v.length !== 0]"
-                          chips="" clearable="" density="compact" label="Tags" multiple=""
+                          chips clearable density="compact" label="Tags" multiple
                           outlined></v-combobox>
               <v-select v-model="createData.docType" :items="['Plain', 'Markdown', 'LaTeX', 'XournalPP']"
                         label="Document type"
@@ -382,8 +382,8 @@ async function showRenderInExplorer() {
               <v-text-field v-model="createData.title" :rules="[v => v.trim() !== '']" label="Title"
                             outlined></v-text-field>
               <v-combobox v-model="createData.tags" v-model:search="createData.tagSearch" :items="createSuggestTags"
-                          :rules="[v => v.length !== 0]" chips=""
-                          clearable="" label="Tags" multiple=""
+                          :rules="[v => v.length !== 0]" chips
+                          clearable label="Tags" multiple
                           outlined></v-combobox>
               <tauri-file-input v-model="createData.file" btn-text="Choose File"/>
             </v-form>

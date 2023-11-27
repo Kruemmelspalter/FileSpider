@@ -1,8 +1,3 @@
-use std::collections::HashMap;
-use std::str::FromStr;
-use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
-
 use chrono::NaiveDateTime;
 use eyre::eyre;
 use eyre::Result;
@@ -12,6 +7,10 @@ use sqlx::{
     Row,
     SqlitePool,
 };
+use std::collections::HashMap;
+use std::str::FromStr;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 use tokio::process::Command;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -269,10 +268,10 @@ pub async fn show_render_in_explorer(
 
     #[cfg(target_os = "windows")]
     unsafe {
-        use windows::Win32::{Foundation::PCSTR, UI::Shell::{shellExecuteA, SW_SHOW}};
+        use windows::Win32::{Foundation::PCSTR, UI::Shell::{ShellExecuteA, SW_SHOW}};
         ShellExecuteA(
             None,
-            PCSTR::null(),
+            PCSTR::from_raw("explore".as_bytes()),
             PCSTR::from_raw(&render.0.as_bytes()),
             PCSTR::null(),
             PCSTR::null(),

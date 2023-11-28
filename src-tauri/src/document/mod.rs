@@ -332,11 +332,11 @@ pub async fn show_render_in_explorer(
 
     #[cfg(target_os = "windows")]
     unsafe {
-        use windows::{core::PCSTR, Win32::UI::{WindowsAndMessaging::SW_SHOW, Shell::ShellExecuteA}};
+        use windows::{core::{s, HSTRING, PCSTR}, Win32::UI::{WindowsAndMessaging::SW_SHOW, Shell::ShellExecuteA}};
         ShellExecuteA(
             None,
-            PCSTR::from_raw("explore".as_bytes()),
-            PCSTR::from_raw(&render.0.as_bytes()),
+            s!("explore"),
+            &HSTRING::from(render.0.as_os_str()),
             PCSTR::null(),
             PCSTR::null(),
             SW_SHOW,

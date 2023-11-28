@@ -336,7 +336,7 @@ pub async fn show_render_in_explorer(
         ShellExecuteA(
             None,
             s!("explore"),
-            &HSTRING::from(render.0.as_os_str()),
+            PCSTR::from(&HSTRING::from(render.0.as_os_str())),
             PCSTR::null(),
             PCSTR::null(),
             SW_SHOW,

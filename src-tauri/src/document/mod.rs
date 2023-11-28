@@ -1,20 +1,25 @@
+use std::collections::HashMap;
+use std::io::Write;
+use std::str::FromStr;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
+
 use chrono::NaiveDateTime;
 use eyre::eyre;
 use eyre::Result;
 use mac_address::get_mac_address;
+use pdf::file::FileOptions;
 use sqlx::{
     query,
     Row,
     SqlitePool,
 };
-use std::collections::HashMap;
-use std::str::FromStr;
-use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
 use tokio::process::Command;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
+use flate2::write::GzEncoder;
+use flate2::Compression;
 
 use crate::directories::get_cache_directory;
 use crate::directories::get_filespider_directory;
@@ -125,6 +130,69 @@ pub async fn create(
         id,
         title,
         doc_type_str,
+        timestamp,
+        extension
+    ).execute(pool).await?;
+
+    for tag in tags {
+        query!("insert into Tag (document, tag) values (?, ?)", id, tag).execute(pool).await?;
+    }
+    Ok(id)
+}
+
+pub async fn import_pdf(
+    pool: &SqlitePool,
+    title: String,
+    tags: Vec<String>,
+    file: String,
+) -> Result<Uuid> {
+    let pdf = FileOptions::cached().open(&file)?;
+
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+
+    encoder.write_all(b"<xournal fileversion=\"4\">")?;
+
+    for (i, page) in pdf.pages().enumerate() {
+        let page = page?;
+        let crop_box = page.crop_box()?;
+
+        let w = if page.rotate == 0 || page.rotate == 180
+        { crop_box.right - crop_box.left } else { crop_box.top - crop_box.bottom }.abs();
+        let h = if page.rotate == 0 || page.rotate == 180
+        { crop_box.top - crop_box.bottom } else { crop_box.right - crop_box.left }.abs();
+
+        encoder.write_all(format!("<page width=\"{w}\" height=\"{h}\"><background type=\"pdf\" pageno=\"{}\" {}/><layer/></page>",
+                                i + 1, if i == 0 { "domain=\"absolute\" filename=\"bg.pdf\"" } else { "" },
+        ).as_bytes())?;
+    }
+
+    encoder.write_all(b"</xournal>")?;
+
+    let xopp_contents = encoder.finish()?;
+
+    let extension = Some("xopp".to_string());
+
+    let id: Uuid = Uuid::now_v1(&get_mac_address()?.map(|x| x.bytes()).unwrap_or([0x69u8; 6]));
+    tokio::fs::create_dir(get_document_directory(&id)?).await?;
+
+    tokio::fs::copy(file,
+                    format!(
+                        "{}/{}",
+                        get_document_directory(&id)?,
+                        "bg.pdf"),
+    ).await?;
+
+    tokio::fs::write(get_document_file(&id, &extension)?,
+                     xopp_contents,
+    ).await?;
+
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u32;
+    let doc_type = DocType::XournalPP.to_string();
+    query!(
+        "insert into Document (id, title, type, added, file_extension) values (?, ?, ?, ?, ?)",
+        id,
+        title,
+        doc_type,
         timestamp,
         extension
     ).execute(pool).await?;

@@ -971,6 +971,7 @@ dependencies = [
  "dbus-tokio",
  "env_logger",
  "eyre",
+ "flate2",
  "futures",
  "fxhash",
  "log",

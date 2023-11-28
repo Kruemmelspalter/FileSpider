@@ -51,6 +51,21 @@ pub async fn create(
 }
 
 #[tauri::command]
+pub async fn import_pdf(
+    state: State<'_, FilespiderState>,
+    title: String,
+    tags: Vec<String>,
+    file: String,
+) -> Result<Uuid, String> {
+    document::import_pdf(
+        &*state.pool.lock().await,
+        title,
+        tags,
+        file,
+    ).await.map_err(|x| format!("{x:#?}"))
+}
+
+#[tauri::command]
 pub async fn get_meta(state: State<'_, FilespiderState>, id: Uuid) -> Result<Meta, String> {
     document::get_meta(&*state.pool.lock().await, id).await.map_err(|x| format!("{x:#?}"))
 }
@@ -115,6 +130,7 @@ pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
     PluginBuilder::new("document").invoke_handler(tauri::generate_handler![
             search,
             create,
+            import_pdf,
             get_meta,
             render,
             open_editor,

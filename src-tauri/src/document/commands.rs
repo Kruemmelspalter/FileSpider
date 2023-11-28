@@ -123,6 +123,7 @@ pub async fn show_render_in_explorer(
         &*state.pool.lock().await,
         &mut *state.renderers.lock().await,
         id,
+        #[cfg(target_os = "linux")]state.dbus.lock().await.clone(),
     ).await.map_err(|x| format!("{x:#?}"))
 }
 

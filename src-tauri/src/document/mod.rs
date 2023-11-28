@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
@@ -306,6 +307,7 @@ pub async fn show_render_in_explorer(
     pool: &SqlitePool,
     renderers: &mut HashMap<(Uuid, Hash), Mutex<JoinHandle<()>>>,
     id: Uuid,
+    #[cfg(target_os = "linux")] dbus: Arc<dbus::nonblock::SyncConnection>,
 ) -> Result<()> {
     document_exists(&id).await?;
 
@@ -315,18 +317,12 @@ pub async fn show_render_in_explorer(
 
     #[cfg(target_os = "linux")]
     {
-        use dbus_tokio::connection;
-        use dbus::nonblock;
         use std::time::Duration;
 
-        let (resource, conn) = connection::new_session_sync()?;
 
-        let _handle = tokio::spawn(async {
-            let err = resource.await;
-            panic!("Lost connection to D-Bus: {}", err);
-        });
 
-        let proxy = nonblock::Proxy::new("org.freedesktop.FileManager1", "/org/freedesktop/FileManager1", Duration::from_secs(2), conn);
+        let proxy = dbus::nonblock::Proxy::new(
+            "org.freedesktop.FileManager1", "/org/freedesktop/FileManager1", Duration::from_secs(5), dbus);
 
         proxy.method_call("org.freedesktop.FileManager1",
                           "ShowItems",
@@ -336,7 +332,7 @@ pub async fn show_render_in_explorer(
 
     #[cfg(target_os = "windows")]
     unsafe {
-        use windows::Win32::{Foundation::PCSTR, UI::Shell::{ShellExecuteA, SW_SHOW}};
+        use windows::{core::PCSTR, Win32::UI::{WindowsAndMessaging::SW_SHOW, Shell::ShellExecuteA}};
         ShellExecuteA(
             None,
             PCSTR::from_raw("explore".as_bytes()),

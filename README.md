@@ -1,6 +1,7 @@
 # FileSpider
 
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/kruemmelspalter/filespider/docker.yml)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/kruemmelspalter/filespider/build.yml)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/kruemmelspalter/filespider/tests.yml?label=tests)
 ![GitHub](https://img.shields.io/github/license/kruemmelspalter/filespider)
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/kruemmelspalter/filespider)
 ![GitHub release (latest SemVer including pre-releases)](https://img.shields.io/github/v/release/kruemmelspalter/filespider?include_prereleases)
@@ -10,8 +11,8 @@ FileSpider is a software for organizing and editing documents.
 Documents consist of a main file and optionally different assets like images.
 For example:
 
-- a markdown document
-- an html document with audio files embedded
+- a Markdown document
+- an HTML document with audio files embedded
 - a LaTeX document split into multiple other tex files and also images
 - a Xournal++ stylus note
 

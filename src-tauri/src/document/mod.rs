@@ -333,7 +333,7 @@ pub async fn show_render_in_explorer(
         use windows::{core::{PCSTR, s}, Win32::UI::{Shell::ShellExecuteA, WindowsAndMessaging::SW_SHOW}};
 
         let mut encoded = render.0
-            .encode_utf8()
+            .as_bytes()
             .chain([0u8])
             .collect::<Vec<u8>>();
 

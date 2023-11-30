@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "insert into Cache (document, hash, render_type) values (?, unhex(?), ?) on conflict(document) do update set hash = unhex(?), render_type = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "dafa6db3633caac9f659232539953dc512a21602a98933ea5d2572ab85309c0d"
+}

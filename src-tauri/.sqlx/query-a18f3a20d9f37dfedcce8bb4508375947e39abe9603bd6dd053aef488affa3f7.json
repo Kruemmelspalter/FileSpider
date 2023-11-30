@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "select distinct tag from Tag where tag like '%' || ? || '%'",
+  "describe": {
+    "columns": [
+      {
+        "name": "tag",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a18f3a20d9f37dfedcce8bb4508375947e39abe9603bd6dd053aef488affa3f7"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "insert into Tag (document, tag) values (?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "d4e766ed466718dd97b3a9079b34c1738a64903cec805f63372e8d34961efb91"
+}

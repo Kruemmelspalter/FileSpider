@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "delete from Document where id = ?; delete from Tag where document = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "dac159c7c481adcfbea6fa43e3e256be4f7b626ff6cd872a1dbcd4a7f7b6fdc5"
+}

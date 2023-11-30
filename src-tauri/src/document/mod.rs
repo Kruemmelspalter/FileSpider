@@ -333,15 +333,15 @@ pub async fn show_render_in_explorer(
         use windows::{core::{PCSTR, s}, Win32::UI::{Shell::ShellExecuteA, WindowsAndMessaging::SW_SHOW}};
 
         let mut encoded = render.0
-            .encode_utf16()
-            .chain([0u16])
-            .collect::<Vec<u16>>();
+            .encode_utf8()
+            .chain([0u8])
+            .collect::<Vec<u8>>();
 
 
         ShellExecuteA(
             None,
             s!("explore"),
-            PCSTR(encoded.as_mut_ptr()),
+            PCSTR(encoded.as_ptr()),
             PCSTR::null(),
             PCSTR::null(),
             SW_SHOW,

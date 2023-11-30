@@ -14,8 +14,7 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
 use std::sync::Arc;
-#[cfg(target_os = "linux")]
-use std::sync::Arc;
+
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 use tokio::process::Command;

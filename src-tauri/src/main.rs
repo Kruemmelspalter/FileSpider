@@ -51,7 +51,7 @@ async fn main() -> Result<()> {
     #[cfg(target_os = "linux")]
     tokio::spawn(async {
         let err = resource.await;
-        error!("Lost connection to D-Bus: {}", err);
+        log::error!("Lost connection to D-Bus: {}", err);
     });
 
     tauri::Builder::default()

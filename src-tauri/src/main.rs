@@ -2,6 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::collections::HashMap;
+#[cfg(target_os = "linux")]
+use std::sync::Arc;
 
 use eyre::Result;
 use sqlx::SqlitePool;
@@ -44,14 +46,14 @@ async fn main() -> Result<()> {
 
     let pool = db::init().await?;
     sqlx::migrate!().run(&pool).await?;
-    #[cfg(target_os = "linux")] {
+    #[cfg(target_os = "linux")]
         let (resource, conn) = dbus_tokio::connection::new_session_sync()?;
+    #[cfg(target_os = "linux")]
+    tokio::spawn(async {
+        let err = resource.await;
+        error!("Lost connection to D-Bus: {}", err);
+    });
 
-        tokio::spawn(async {
-            let err = resource.await;
-            error!("Lost connection to D-Bus: {}", err);
-        });
-    }
     tauri::Builder::default()
         .manage(FilespiderState::new(pool, #[cfg(target_os = "linux")] conn))
         .plugin(document::commands::plugin())

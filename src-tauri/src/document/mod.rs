@@ -1,13 +1,8 @@
-use std::collections::HashMap;
-use std::io::Write;
-use std::str::FromStr;
-use std::sync::Arc;
-use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
-
 use chrono::NaiveDateTime;
 use eyre::eyre;
 use eyre::Result;
+use flate2::Compression;
+use flate2::write::GzEncoder;
 use mac_address::get_mac_address;
 use pdf::file::FileOptions;
 use sqlx::{
@@ -15,12 +10,18 @@ use sqlx::{
     Row,
     SqlitePool,
 };
+use std::collections::HashMap;
+use std::io::Write;
+use std::str::FromStr;
+use std::sync::Arc;
+#[cfg(target_os = "linux")]
+use std::sync::Arc;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 use tokio::process::Command;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
-use flate2::write::GzEncoder;
-use flate2::Compression;
 
 use crate::directories::get_cache_directory;
 use crate::directories::get_filespider_directory;
@@ -163,7 +164,7 @@ pub async fn import_pdf(
         { crop_box.top - crop_box.bottom } else { crop_box.right - crop_box.left }.abs();
 
         encoder.write_all(format!("<page width=\"{w}\" height=\"{h}\"><background type=\"pdf\" pageno=\"{}\" {}/><layer/></page>",
-                                i + 1, if i == 0 { "domain=\"absolute\" filename=\"bg.pdf\"" } else { "" },
+                                  i + 1, if i == 0 { "domain=\"absolute\" filename=\"bg.pdf\"" } else { "" },
         ).as_bytes())?;
     }
 
@@ -319,8 +320,6 @@ pub async fn show_render_in_explorer(
     {
         use std::time::Duration;
 
-
-
         let proxy = dbus::nonblock::Proxy::new(
             "org.freedesktop.FileManager1", "/org/freedesktop/FileManager1", Duration::from_secs(5), dbus);
 
@@ -332,13 +331,12 @@ pub async fn show_render_in_explorer(
 
     #[cfg(target_os = "windows")]
     unsafe {
-        use windows::{core::{s, PCSTR}, Win32::UI::{WindowsAndMessaging::SW_SHOW, Shell::ShellExecuteA}};
+        use windows::{core::{PCSTR, s}, Win32::UI::{Shell::ShellExecuteA, WindowsAndMessaging::SW_SHOW}};
 
         let mut encoded = render.0
             .encode_utf16()
             .chain([0u16])
             .collect::<Vec<u16>>();
-
 
 
         ShellExecuteA(

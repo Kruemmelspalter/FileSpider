@@ -334,7 +334,7 @@ pub async fn show_render_in_explorer(
 
         let mut encoded = render.0
             .as_bytes()
-            .into_iter()
+            .iter()
             .chain([0u8])
             .collect::<Vec<u8>>();
 

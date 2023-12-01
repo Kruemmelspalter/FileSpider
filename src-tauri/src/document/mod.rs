@@ -1,15 +1,11 @@
 use chrono::NaiveDateTime;
 use eyre::eyre;
 use eyre::Result;
-use flate2::Compression;
 use flate2::write::GzEncoder;
+use flate2::Compression;
 use mac_address::get_mac_address;
 use pdf::file::FileOptions;
-use sqlx::{
-    query,
-    Row,
-    SqlitePool,
-};
+use sqlx::{query, Row, SqlitePool};
 use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
@@ -73,7 +69,7 @@ pub async fn search(
     page_length: u32,
     sort: SearchSorting,
 ) -> Result<Vec<Meta>> {
-// TODO sort
+    // TODO sort
     let query_str = format!(
         "select id from Document left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as posTags on posTags.document = Document.id left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as negTags on negTags.document = document.id where {} and (negTags.tagCount = 0 or negTags.tagCount is null) and Document.title like ?  order by {} {} limit ?, ?",
         if pos_filter.is_empty() { "()".to_string() } else { format!("(?{})", ", ?".repeat(pos_filter.len() - 1)) },
@@ -92,11 +88,18 @@ pub async fn search(
         query = query.bind(neg_tag);
     }
 
-    query = query.bind(pos_filter.len() as u32).bind(format!("%{}%", crib)).bind(page * page_length).bind(page_length);
+    query = query
+        .bind(pos_filter.len() as u32)
+        .bind(format!("%{}%", crib))
+        .bind(page * page_length)
+        .bind(page_length);
 
     let docs: Vec<Uuid> = query.map(|x| x.get("id")).fetch_all(pool).await?;
 
-    futures::future::join_all(docs.into_iter().map(|id| get_meta(pool, id))).await.into_iter().collect()
+    futures::future::join_all(docs.into_iter().map(|id| get_meta(pool, id)))
+        .await
+        .into_iter()
+        .collect()
 }
 
 pub async fn create(
@@ -112,16 +115,10 @@ pub async fn create(
     tokio::fs::create_dir(get_document_directory(&id)?).await?;
 
     match file {
-        Some(path) => tokio::fs::copy(
-            path,
-            get_document_file(&id, &extension)?,
-        ).await.map(|_| ()),
-        None => {
-            tokio::fs::write(
-                get_document_file(&id, &extension)?,
-                [0u8; 0],
-            ).await
-        }
+        Some(path) => tokio::fs::copy(path, get_document_file(&id, &extension)?)
+            .await
+            .map(|_| ()),
+        None => tokio::fs::write(get_document_file(&id, &extension)?, [0u8; 0]).await,
     }?;
 
     let doc_type_str = doc_type.unwrap_or(DocType::Plain).to_string();
@@ -133,10 +130,14 @@ pub async fn create(
         doc_type_str,
         timestamp,
         extension
-    ).execute(pool).await?;
+    )
+    .execute(pool)
+    .await?;
 
     for tag in tags {
-        query!("insert into Tag (document, tag) values (?, ?)", id, tag).execute(pool).await?;
+        query!("insert into Tag (document, tag) values (?, ?)", id, tag)
+            .execute(pool)
+            .await?;
     }
     Ok(id)
 }
@@ -157,10 +158,18 @@ pub async fn import_pdf(
         let page = page?;
         let crop_box = page.crop_box()?;
 
-        let w = if page.rotate == 0 || page.rotate == 180
-        { crop_box.right - crop_box.left } else { crop_box.top - crop_box.bottom }.abs();
-        let h = if page.rotate == 0 || page.rotate == 180
-        { crop_box.top - crop_box.bottom } else { crop_box.right - crop_box.left }.abs();
+        let w = if page.rotate == 0 || page.rotate == 180 {
+            crop_box.right - crop_box.left
+        } else {
+            crop_box.top - crop_box.bottom
+        }
+        .abs();
+        let h = if page.rotate == 0 || page.rotate == 180 {
+            crop_box.top - crop_box.bottom
+        } else {
+            crop_box.right - crop_box.left
+        }
+        .abs();
 
         encoder.write_all(format!("<page width=\"{w}\" height=\"{h}\"><background type=\"pdf\" pageno=\"{}\" {}/><layer/></page>",
                                   i + 1, if i == 0 { "domain=\"absolute\" filename=\"bg.pdf\"" } else { "" },
@@ -176,16 +185,13 @@ pub async fn import_pdf(
     let id: Uuid = Uuid::now_v1(&get_mac_address()?.map(|x| x.bytes()).unwrap_or([0x69u8; 6]));
     tokio::fs::create_dir(get_document_directory(&id)?).await?;
 
-    tokio::fs::copy(file,
-                    format!(
-                        "{}/{}",
-                        get_document_directory(&id)?,
-                        "bg.pdf"),
-    ).await?;
+    tokio::fs::copy(
+        file,
+        format!("{}/{}", get_document_directory(&id)?, "bg.pdf"),
+    )
+    .await?;
 
-    tokio::fs::write(get_document_file(&id, &extension)?,
-                     xopp_contents,
-    ).await?;
+    tokio::fs::write(get_document_file(&id, &extension)?, xopp_contents).await?;
 
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u32;
     let doc_type = DocType::XournalPP.to_string();
@@ -196,10 +202,14 @@ pub async fn import_pdf(
         doc_type,
         timestamp,
         extension
-    ).execute(pool).await?;
+    )
+    .execute(pool)
+    .await?;
 
     for tag in tags {
-        query!("insert into Tag (document, tag) values (?, ?)", id, tag).execute(pool).await?;
+        query!("insert into Tag (document, tag) values (?, ?)", id, tag)
+            .execute(pool)
+            .await?;
     }
     Ok(id)
 }
@@ -210,9 +220,14 @@ pub async fn get_meta(pool: &SqlitePool, id: Uuid) -> Result<Meta> {
     let doc_res = query!(
         "select title, type, added, file_extension from Document where id = ?",
         id
-    ).fetch_one(pool).await?;
+    )
+    .fetch_one(pool)
+    .await?;
 
-    let tags = query!("select tag from Tag where document = ?", id).map(|x| x.tag).fetch_all(pool).await?;
+    let tags = query!("select tag from Tag where document = ?", id)
+        .map(|x| x.tag)
+        .fetch_all(pool)
+        .await?;
 
     Ok(Meta {
         title: doc_res.title,
@@ -220,8 +235,15 @@ pub async fn get_meta(pool: &SqlitePool, id: Uuid) -> Result<Meta> {
         tags,
         created: NaiveDateTime::from_timestamp_millis(doc_res.added).unwrap(),
         accessed: NaiveDateTime::from_timestamp_millis(
-            tokio::fs::metadata(get_document_file(&id, &doc_res.file_extension)?).await?.accessed()?.duration_since(UNIX_EPOCH)?.as_millis().try_into().unwrap(),
-        ).unwrap(),
+            tokio::fs::metadata(get_document_file(&id, &doc_res.file_extension)?)
+                .await?
+                .accessed()?
+                .duration_since(UNIX_EPOCH)?
+                .as_millis()
+                .try_into()
+                .unwrap(),
+        )
+        .unwrap(),
         id,
         extension: doc_res.file_extension,
     })
@@ -247,7 +269,10 @@ pub async fn open_editor(
 
     editors.insert(
         id,
-        Command::new(meta.doc_type.get_editor().0).args(meta.doc_type.get_editor().1).arg(get_document_file(&meta.id, &meta.extension)?).spawn()?,
+        Command::new(meta.doc_type.get_editor().0)
+            .args(meta.doc_type.get_editor().1)
+            .arg(get_document_file(&meta.id, &meta.extension)?)
+            .spawn()?,
     );
 
     Ok(true)
@@ -258,20 +283,32 @@ pub async fn patch_meta(pool: &SqlitePool, id: Uuid, patch: MetaPatch) -> Result
 
     match patch {
         MetaPatch::ChangeTitle(title) => {
-            match query!("update Document set title = ? where id = ?", title, id).execute(pool).await?.rows_affected() {
+            match query!("update Document set title = ? where id = ?", title, id)
+                .execute(pool)
+                .await?
+                .rows_affected()
+            {
                 1 => Ok(()),
                 _ => Err(eyre!("Wrong number of rows affected")),
             }
         }
         MetaPatch::AddTag(tag) => {
-            match query!("insert into Tag (document, tag) values (?, ?)", id, tag).execute(pool).await?.rows_affected() {
+            match query!("insert into Tag (document, tag) values (?, ?)", id, tag)
+                .execute(pool)
+                .await?
+                .rows_affected()
+            {
                 0 => Err(eyre!("document already has tag")),
                 1 => Ok(()),
                 _ => panic!(),
             }
         }
         MetaPatch::RemoveTag(tag) => {
-            match query!("delete from Tag where tag = ? and document = ?", tag, id).execute(pool).await?.rows_affected() {
+            match query!("delete from Tag where tag = ? and document = ?", tag, id)
+                .execute(pool)
+                .await?
+                .rows_affected()
+            {
                 1 => Ok(()),
                 0 => Err(eyre!("failed to delete tag")),
                 _ => panic!(),
@@ -287,7 +324,12 @@ pub async fn delete(pool: &SqlitePool, id: Uuid) -> Result<()> {
         "delete from Document where id = ?; delete from Tag where document = ?",
         id,
         id
-    ).execute(pool).await?.rows_affected() == 0 {
+    )
+    .execute(pool)
+    .await?
+    .rows_affected()
+        == 0
+    {
         return Err(eyre!("no rows affected"));
     }
 
@@ -300,7 +342,10 @@ pub async fn get_tags(pool: &SqlitePool, crib: String) -> Result<Vec<String>> {
     Ok(query!(
         "select distinct tag from Tag where tag like '%' || ? || '%'",
         crib
-    ).map(|x| x.tag).fetch_all(pool).await?)
+    )
+    .map(|x| x.tag)
+    .fetch_all(pool)
+    .await?)
 }
 
 pub async fn show_render_in_explorer(
@@ -320,24 +365,34 @@ pub async fn show_render_in_explorer(
         use std::time::Duration;
 
         let proxy = dbus::nonblock::Proxy::new(
-            "org.freedesktop.FileManager1", "/org/freedesktop/FileManager1", Duration::from_secs(5), dbus);
+            "org.freedesktop.FileManager1",
+            "/org/freedesktop/FileManager1",
+            Duration::from_secs(5),
+            dbus,
+        );
 
-        proxy.method_call("org.freedesktop.FileManager1",
-                          "ShowItems",
-                          (vec![format!("file://{}", render.0)], ""),
-        ).await?;
+        proxy
+            .method_call(
+                "org.freedesktop.FileManager1",
+                "ShowItems",
+                (vec![format!("file://{}", render.0)], ""),
+            )
+            .await?;
     }
 
     #[cfg(target_os = "windows")]
     unsafe {
-        use windows::{core::{PCSTR, s}, Win32::UI::{Shell::ShellExecuteA, WindowsAndMessaging::SW_SHOW}};
+        use windows::{
+            core::{s, PCSTR},
+            Win32::UI::{Shell::ShellExecuteA, WindowsAndMessaging::SW_SHOW},
+        };
 
-        let mut encoded = render.0
+        let mut encoded = render
+            .0
             .as_bytes()
             .iter()
-            .chain([0u8])
+            .chain([&0u8])
             .collect::<Vec<u8>>();
-
 
         ShellExecuteA(
             None,

@@ -6,7 +6,7 @@ jobs:
       matrix:
         rust: [ stable, nightly ]
         os: [ ubuntu-latest, windows-latest ]
-    
+
     defaults:
       run:
         shell: bash
@@ -18,19 +18,28 @@ jobs:
       - id: versions
         run: |
           echo "rust=$(rustc --version 2>&1|sed -E 's/^rustc [[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+ \(([[:digit:][:lower:]]+) [[:digit:]]+-[[:digit:]]+-[[:digit:]]+\)$/\1/')" >> $GITHUB_OUTPUT
-          echo "yarncachedir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+          echo "yarncachedir=$(yarn cache dir)" >> $GITHUB_OUTPUT 
+          if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            echo "cargohome=$HOME/.cargo" >> $GITHUB_OUTPUT
+          elif [[ "$OSTYPE" == "darwin"* ]]; then 
+            echo "cargohome=$HOME/.cargo" >> $GITHUB_OUTPUT
+          elif [[ "$OSTYPE" == "msys"* ]]; then 
+            echo "cargohome=%USERPROFILE%/.cargo" >> $GITHUB_OUTPUT
+          elif [[ "%OSTYPE" == "cygwin"* ]]; then
+            echo "cargohome=%USERPROFILE%/.cargo" >> $GITHUB_OUTPUT
+          fi
         shell: bash
 
       - uses: actions/cache@v3
         id: rust-cache
         with:
           path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
+            ${{ steps.versions.outputs.cargohome }}/bin/
+            ${{ steps.versions.outputs.cargohome }}/registry/index/
+            ${{ steps.versions.outputs.cargohome }}/registry/cache/
+            ${{ steps.versions.outputs.cargohome }}/git/db/
             src-tauri/target/
-          key: rust-${{ runner.os }}-${{ steps.versions.outputs.rust }}-${{ hashFiles('**/Cargo.lock') }}
+          key: rust-${{ runner.os }}-${{ steps.versions.outputs.rust }}
       - uses: actions/cache@v3
         with:
           path: |

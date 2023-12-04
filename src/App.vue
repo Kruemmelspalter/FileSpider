@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import {Ref, ref, watch} from "vue";
+import {Ref, ref, VNode, watch} from "vue";
 import {computedAsync} from "@vueuse/core";
 
 import {invoke} from "@tauri-apps/api";
@@ -7,6 +7,13 @@ import {convertFileSrc} from "@tauri-apps/api/tauri";
 import {VTextField} from "vuetify/components";
 import {readTextFile} from "@tauri-apps/api/fs";
 import TauriFileInput from "./components/TauriFileInput.vue";
+
+// noinspection JSUnusedGlobalSymbols
+const vVisible = {
+  updated(el: HTMLElement, binding: { value: boolean }, _vnode: VNode, _prevVnode: VNode) {
+    el.style.visibility = binding.value ? "visible" : "hidden";
+  }
+}
 
 type DocMeta = {
   id: string,
@@ -18,19 +25,23 @@ type DocMeta = {
   extension: string | undefined,
 }
 
-const id = ref<string | undefined>("b69e86d8-88c0-11ee-ad1d-6c0b843e3b00");
+const id = ref<string | undefined>(undefined);
 
-const meta = computedAsync<DocMeta | undefined>(async () =>
-    <DocMeta | undefined>(await invoke('plugin:document|get_meta', {id: id.value})
-        .catch(error => {
-          addAlert("Error while fetching document meta", <string>error, "error", true, 10000)
-          return undefined
-        })), undefined);
+const meta = computedAsync<DocMeta | undefined>(async () => {
+  if (id.value === undefined) return undefined;
+  return <DocMeta | undefined>(await invoke('plugin:document|get_meta', {id: id.value})
+      .catch(error => {
+        addAlert("Error while fetching document meta", <string>error, "error", true, 10000)
+        return undefined
+      }))
+}, undefined);
 
-const rendered = computedAsync<[string, string] | undefined>(async () =>
-    <[string, string] | undefined>(await invoke('plugin:document|render', {id: id.value}).catch(error => {
-      addAlert("Error while rendering document", <string>error, "error", true, 10000);
-    })), undefined);
+const rendered = computedAsync<[string, string] | undefined>(async () => {
+  if (id.value === undefined) return undefined;
+  return <[string, string] | undefined>(await invoke('plugin:document|render', {id: id.value}).catch(error => {
+    addAlert("Error while rendering document", <string>error, "error", true, 10000);
+  }))
+}, undefined);
 
 const fullscreen = ref(false);
 
@@ -305,7 +316,8 @@ async function showRenderInExplorer() {
 
       <v-spacer/>
 
-      <v-icon :icon="`fas fa-${fullscreen ? 'compress' : 'expand'}`" class="mx-1" @click="toggleFullscreen"/>
+      <v-icon :icon="`fas fa-${fullscreen ? 'compress' : 'expand'}`" class="mx-1" @click="toggleFullscreen"
+              v-visible="id != undefined"/>
 
       <i class="mx-2"/>
 
@@ -314,10 +326,10 @@ async function showRenderInExplorer() {
 
       <i class="mx-2"/>
 
-      <v-icon class="mx-1" icon="fas fa-file-pen" @click="openEditor"/>
-      <v-icon class="mx-1" icon="fas fa-rotate-right" @click="triggerMetaUpdate"/>
-      <v-icon class="mx-1" icon="fas fa-file-export" @click="showRenderInExplorer"/>
-      <v-icon class="mx-1" icon="fas fa-trash" @click="deleteSheet = true;"/>
+      <v-icon class="mx-1" icon="fas fa-file-pen" @click="openEditor" v-visible="id !== undefined"/>
+      <v-icon class="mx-1" icon="fas fa-rotate-right" @click="triggerMetaUpdate" v-visible="id !== undefined"/>
+      <v-icon class="mx-1" icon="fas fa-file-export" @click="showRenderInExplorer" v-visible="id !== undefined"/>
+      <v-icon class="mx-1" icon="fas fa-trash" @click="deleteSheet = true;" v-visible="id !== undefined"/>
     </v-system-bar>
 
     <v-main>

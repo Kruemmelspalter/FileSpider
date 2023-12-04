@@ -233,18 +233,26 @@ const searchValid = ref(false);
 
 const searchResults = ref<DocMeta[]>([]);
 
-async function search() {
+const page = ref(0);
+const pageLength = ref(10);
+
+async function getSearchResults() {
   await invoke('plugin:document|search', {
     posFilter: posTags.value,
     negFilter: negTags.value,
     crib: titleCrib.value,
-    page: 0,
-    pageLength: 10,
+    page: page.value,
+    pageLength: pageLength.value,
     sort: ["CreationTime", false]
   })
       .catch(error =>
           addAlert("Error while searching", <string>error, "error", true, 10000)
       ).then(res => searchResults.value = <DocMeta[]>res)
+}
+
+async function search() {
+  page.value = 0;
+  await getSearchResults()
 }
 
 async function openEditor() {
@@ -308,6 +316,23 @@ async function showRenderInExplorer() {
 
         </v-list-item>
       </v-list>
+      <v-spacer/>
+      <div class="my-2 d-flex">
+        <v-spacer/>
+        <v-select v-model="pageLength" hide-details :items="[10, 25, 50, 100]" dense style="width: 5%;"
+                  @change="getSearchResults"/>
+        <v-spacer/>
+      </div>
+      <div  class="my-2 d-flex align-center">
+        <v-spacer/>
+
+        <v-icon icon="fas fa-angle-left" size="x-large"
+                :style="page == 0 ? {'filter': 'contrast(20%)', 'cursor':'default '} : {}"
+                @click="page!== 0 ? (()=>{page--; getSearchResults()})() : undefined"/>
+        <span class="mx-2">{{ page + 1 }}</span>
+        <v-icon icon="fas fa-angle-right" size="x-large" @click="page++; getSearchResults()"/>
+        <v-spacer/>
+      </div>
     </v-navigation-drawer>
 
     <v-system-bar class="py-3" color="primary">

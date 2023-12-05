@@ -95,6 +95,7 @@ jobs:
 
       - if: matrix.os == 'windows-latest'
         run: |
+          ls src-tauri/target/release/bundle/{msi,nsis}
           mv src-tauri/target/release/bundle/msi/filespider_*.msi filespider-${{matrix.rust}}.msi
           mv src-tauri/target/release/bundle/nsis/filespider_*-setup.exe filespider-${{matrix.rust}}.exe
 

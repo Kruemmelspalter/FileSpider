@@ -1,18 +1,18 @@
 name: Build
-on: [ push ]
+on: [push]
 jobs:
   build:
     strategy:
       matrix:
-        rust: [ stable, nightly ]
-        os: [ ubuntu-latest, windows-latest ]
+        rust: [stable, nightly]
+        os: [ubuntu-latest, windows-latest]
 
     defaults:
       run:
         shell: bash
 
     env:
-      CARGO_HOME: ${{ github.workspace }}.cargo
+      CARGO_HOME: ${{ github.workspace }}/.cargo
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -62,7 +62,6 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
 
       - uses: rui314/setup-mold@v1
-
 
       - run: cargo install tauri-cli
         if: steps.rust-cache.outputs.cache-hit != 'true'

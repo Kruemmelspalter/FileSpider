@@ -39,3 +39,4 @@ height = 600
 
 [tauri.allowlist.dialog]
 open = true
+

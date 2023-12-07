@@ -9,6 +9,8 @@ use sqlx::{query, Row, SqlitePool};
 use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
+
+#[cfg(target_os = "linux")]
 use std::sync::Arc;
 
 use std::time::SystemTime;
@@ -387,7 +389,7 @@ pub async fn show_render_in_explorer(
             Win32::UI::{Shell::ShellExecuteA, WindowsAndMessaging::SW_SHOW},
         };
 
-        let mut encoded = render
+        let encoded = render
             .0
             .as_bytes()
             .into_iter()

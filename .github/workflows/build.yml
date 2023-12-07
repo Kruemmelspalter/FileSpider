@@ -34,6 +34,8 @@ jobs:
             .cargo/registry/index/
             .cargo/registry/cache/
             .cargo/git/db/
+            .cargo/.crates.toml
+            .cargo/.crates2.json
             src-tauri/target/
           key: rust-${{ runner.os }}-${{ steps.versions.outputs.rust }}
       - uses: actions/cache@v3
@@ -42,10 +44,6 @@ jobs:
             ${{ steps.versions.outputs.yarncachedir }}
           key: yarn-${{ runner.os }}-${{ hashFiles('**/yarn.lock')}}
 
-          # - uses: e-t-l/setup-mingw@patch-1
-          # with:
-          # platform: x64
-        # if: matrix.os == 'windows-latest'
       - uses: GuillaumeFalourd/setup-windows10-sdk-action@v1.11
         if: matrix.os == 'windows-latest'
 

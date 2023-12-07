@@ -107,4 +107,4 @@ jobs:
             .cargo/registry/cache/
             .cargo/git/db/
             src-tauri/target/
-          key: rust-${{ runner.os }}-${{ steps.versions.outputs.rust }}
+          key: rust-${{ runner.os }}-${{ steps.versions.outputs.rust }}-${{ hashFiles('**/Cargo.lock') }}

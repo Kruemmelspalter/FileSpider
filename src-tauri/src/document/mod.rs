@@ -126,12 +126,13 @@ pub async fn create(
     let doc_type_str = doc_type.unwrap_or(DocType::Plain).to_string();
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u32;
     query!(
-        "insert into Document (id, title, type, added, file_extension) values (?, ?, ?, ?, ?)",
+        "insert into Document (id, title, type, added, file_extension, accessed) values (?, ?, ?, ?, ?, ?)",
         id,
         title,
         doc_type_str,
         timestamp,
-        extension
+        extension,
+        timestamp,
     )
         .execute(pool)
         .await?;
@@ -198,12 +199,13 @@ pub async fn import_pdf(
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u32;
     let doc_type = DocType::XournalPP.to_string();
     query!(
-        "insert into Document (id, title, type, added, file_extension) values (?, ?, ?, ?, ?)",
+        "insert into Document (id, title, type, added, file_extension, accessed) values (?, ?, ?, ?, ?, ?)",
         id,
         title,
         doc_type,
         timestamp,
-        extension
+        extension,
+        timestamp
     )
         .execute(pool)
         .await?;

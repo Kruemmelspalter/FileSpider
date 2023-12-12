@@ -237,17 +237,25 @@ const page = ref(0);
 const pageLength = ref(10);
 
 async function getSearchResults() {
-  await invoke('plugin:document|search', {
-    posFilter: posTags.value,
-    negFilter: negTags.value,
-    crib: titleCrib.value,
-    page: page.value,
-    pageLength: pageLength.value,
-    sort: ["CreationTime", false]
-  })
-      .catch(error =>
-          addAlert("Error while searching", <string>error, "error", true, 10000)
-      ).then(res => searchResults.value = <DocMeta[]>res)
+  if(posTags.value.length !== 0) {
+
+    let res = await invoke('plugin:document|search', {
+      posFilter: posTags.value,
+      negFilter: negTags.value,
+      crib: titleCrib.value,
+      page: page.value,
+      pageLength: pageLength.value,
+      sort: ["CreationTime", false]
+    })
+        .catch(error =>
+            addAlert("Error while searching", <string>error, "error", true, 10000)
+        );
+    searchResults.value = <DocMeta[]>res;
+  }
+  if(searchResults.value.length == 0 && page.value > 0) {
+    page.value = 0;
+    await getSearchResults()
+  }
 }
 
 async function search() {

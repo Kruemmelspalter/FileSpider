@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "update Document set accessed = ? where id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "69197660fa586fbf41145b66fa453b5f1ce2eefedc2e259d1bd03fd0a0a8b436"
+}

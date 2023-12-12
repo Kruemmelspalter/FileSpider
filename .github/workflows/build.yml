@@ -1,55 +1,23 @@
 name: Build
-on: [ push ]
+on: [push]
 jobs:
   build:
     strategy:
       matrix:
-        rust: [ stable, nightly ]
-        os: [ ubuntu-latest, windows-latest ]
+        rust: [stable, nightly]
+        os: [ubuntu-latest, windows-latest]
 
     defaults:
       run:
         shell: bash
 
+    env:
+      CARGO_HOME: ${{ github.workspace }}/.cargo
+
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
-      - id: versions
-        run: |
-          echo "rust=$(rustc --version 2>&1|sed -E 's/^rustc [[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+ \(([[:digit:][:lower:]]+) [[:digit:]]+-[[:digit:]]+-[[:digit:]]+\)$/\1/')" >> $GITHUB_OUTPUT
-          echo "yarncachedir=$(yarn cache dir)" >> $GITHUB_OUTPUT 
-          if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-            echo "cargohome=$HOME/.cargo" >> $GITHUB_OUTPUT
-          elif [[ "$OSTYPE" == "darwin"* ]]; then 
-            echo "cargohome=$HOME/.cargo" >> $GITHUB_OUTPUT
-          elif [[ "$OSTYPE" == "msys"* ]]; then 
-            echo "cargohome=%USERPROFILE%/.cargo" >> $GITHUB_OUTPUT
-          elif [[ "%OSTYPE" == "cygwin"* ]]; then
-            echo "cargohome=%USERPROFILE%/.cargo" >> $GITHUB_OUTPUT
-          fi
-        shell: bash
-
-      - uses: actions/cache@v3
-        id: rust-cache
-        with:
-          path: |
-            ${{ steps.versions.outputs.cargohome }}/bin/
-            ${{ steps.versions.outputs.cargohome }}/registry/index/
-            ${{ steps.versions.outputs.cargohome }}/registry/cache/
-            ${{ steps.versions.outputs.cargohome }}/git/db/
-            src-tauri/target/
-          key: rust-${{ runner.os }}-${{ steps.versions.outputs.rust }}
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ${{ steps.versions.outputs.yarncachedir }}
-          key: yarn-${{ runner.os }}-${{ hashFiles('**/yarn.lock')}}
-
-          # - uses: e-t-l/setup-mingw@patch-1
-          # with:
-          # platform: x64
-        # if: matrix.os == 'windows-latest'
       - uses: GuillaumeFalourd/setup-windows10-sdk-action@v1.11
         if: matrix.os == 'windows-latest'
 
@@ -67,7 +35,6 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
 
       - uses: rui314/setup-mold@v1
-
 
       - run: cargo install tauri-cli
         if: steps.rust-cache.outputs.cache-hit != 'true'
@@ -93,6 +60,7 @@ jobs:
 
       - if: matrix.os == 'windows-latest'
         run: |
+          ls src-tauri/target/release/bundle/{msi,nsis} 
           mv src-tauri/target/release/bundle/msi/filespider_*.msi filespider-${{matrix.rust}}.msi
           mv src-tauri/target/release/bundle/nsis/filespider_*-setup.exe filespider-${{matrix.rust}}.exe
 

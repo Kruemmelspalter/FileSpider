@@ -71,13 +71,19 @@ pub async fn search(
     page_length: u32,
     sort: SearchSorting,
 ) -> Result<Vec<Meta>> {
-    // TODO sort
+
+    use SearchSortCriterium::*;
+
     let query_str = format!(
         "select id from Document left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as posTags on posTags.document = Document.id left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as negTags on negTags.document = document.id where {} and (negTags.tagCount = 0 or negTags.tagCount is null) and Document.title like ?  order by {} {} limit ?, ?",
         if pos_filter.is_empty() { "()".to_string() } else { format!("(?{})", ", ?".repeat(pos_filter.len() - 1)) },
         if neg_filter.is_empty() { "()".to_string() } else { format!("(?{})", ", ?".repeat(neg_filter.len() - 1)) },
         if pos_filter.is_empty() { "(posTags.tagCount = ? or posTags.tagCount is null)" } else { "posTags.tagCount = ?" },
-        match sort.0 { SearchSortCriterium::CreationTime => "Document.added" },
+        match sort.0 {
+            CreationTime => "Document.added",
+            AccessTime => "Document.accessed",
+            Title => "Document.title",
+        },
         if sort.1 { "asc" } else { "desc" }
     );
 

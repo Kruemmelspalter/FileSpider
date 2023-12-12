@@ -18,32 +18,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - id: versions
-        run: |
-          echo "rust=$(rustc --version 2>&1|sed -E 's/^rustc [[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+ \(([[:digit:][:lower:]]+) [[:digit:]]+-[[:digit:]]+-[[:digit:]]+\)$/\1/')" >> $GITHUB_OUTPUT
-          echo "yarncachedir=$(yarn cache dir)" >> $GITHUB_OUTPUT 
-          cat $GITHUB_OUTPUT
-        shell: bash
-
-      - uses: actions/cache/restore@v3
-        id: rust-cache
-        if: github.run_attempt == 1
-        with:
-          path: |
-            .cargo/bin/
-            .cargo/registry/index/
-            .cargo/registry/cache/
-            .cargo/git/db/
-            .cargo/.crates.toml
-            .cargo/.crates2.json
-            src-tauri/target/
-          key: rust-${{ runner.os }}-${{ steps.versions.outputs.rust }}-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ${{ steps.versions.outputs.yarncachedir }}
-          key: yarn-${{ runner.os }}-${{ hashFiles('**/yarn.lock')}}
-
       - uses: GuillaumeFalourd/setup-windows10-sdk-action@v1.11
         if: matrix.os == 'windows-latest'
 
@@ -98,13 +72,3 @@ jobs:
         if: matrix.os == 'windows-latest'
         with:
           path: filespider-${{matrix.rust}}.exe
-
-      - uses: actions/cache/save@v3
-        with:
-          path: |
-            .cargo/bin/
-            .cargo/registry/index/
-            .cargo/registry/cache/
-            .cargo/git/db/
-            src-tauri/target/
-          key: rust-${{ runner.os }}-${{ steps.versions.outputs.rust }}-${{ hashFiles('**/Cargo.lock') }}

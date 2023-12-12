@@ -12,27 +12,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - id: versions
-        run: |
-          echo "rust=$(rustc --version 2>&1|sed -E 's/^rustc [[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+ \(([[:digit:][:lower:]]+) [[:digit:]]+-[[:digit:]]+-[[:digit:]]+\)$/\1/')" >> $GITHUB_OUTPUT
-          echo "yarncachedir=$(yarn cache dir)" >> $GITHUB_OUTPUT
-        shell: bash
-
-      - uses: actions/cache@v3
-        id: rust-cache
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            src-tauri/target/
-          key: rust-${{ runner.os }}-${{ steps.versions.outputs.rust }}-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ${{ steps.versions.outputs.yarncachedir }}
-          key: yarn-${{ runner.os }}-${{ hashFiles('**/yarn.lock')}}
 
       - uses: GuillaumeFalourd/setup-windows10-sdk-action@v1.11
         if: matrix.os == 'windows-latest'

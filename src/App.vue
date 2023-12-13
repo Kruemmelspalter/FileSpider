@@ -29,6 +29,8 @@ const id = ref<string | undefined>(undefined);
 
 const meta = computedAsync<DocMeta | undefined>(async () => {
   if (id.value === undefined) return undefined;
+
+  await invoke('plugin:document|update_accessed', {id: id.value});
   return <DocMeta | undefined>(await invoke('plugin:document|get_meta', {id: id.value})
       .catch(error => {
         addAlert("Error while fetching document meta", <string>error, "error", true, 10000)
@@ -245,7 +247,7 @@ async function getSearchResults() {
       crib: titleCrib.value,
       page: page.value,
       pageLength: pageLength.value,
-      sort: ["CreationTime", false]
+      sort: ["AccessTime", false]
     })
         .catch(error =>
             addAlert("Error while searching", <string>error, "error", true, 10000)

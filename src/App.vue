@@ -19,8 +19,8 @@ type DocMeta = {
   id: string,
   title: string,
   docType: string,
-  created: string,
-  accessed: string,
+  created: Date,
+  accessed: Date,
   tags: string[],
   extension: string | undefined,
 }
@@ -238,6 +238,8 @@ const searchResults = ref<DocMeta[]>([]);
 const page = ref(0);
 const pageLength = ref(10);
 
+const sorting = ref('AccessTime');
+
 async function getSearchResults() {
   if (posTags.value.length !== 0) {
 
@@ -247,7 +249,7 @@ async function getSearchResults() {
       crib: titleCrib.value,
       page: page.value,
       pageLength: pageLength.value,
-      sort: ["AccessTime", false]
+      sort: [sorting.value, false]
     })
         .catch(error =>
             addAlert("Error while searching", <string>error, "error", true, 10000)
@@ -280,6 +282,12 @@ async function showRenderInExplorer() {
           addAlert("Error while opening file explorer", <string>error, "error", true, 10000)
       );
 }
+
+function formatDate(date: any): String {
+  return Intl.DateTimeFormat(navigator.language,
+      {dateStyle: 'short', timeStyle: 'short'},
+  ).format(new Date(date));
+}
 </script>
 
 <template>
@@ -302,17 +310,19 @@ async function showRenderInExplorer() {
                     :items="negTagsSuggestions" chips clearable density="compact" label="Negative Tags"
                     multiple outlined/>
         <v-text-field v-model="titleCrib" label="Title Crib" outlined @update:modelValue="search"/>
+        <v-select v-model="sorting" :items="['AccessTime', 'CreationTime', 'Title']" label="Sorting" outlined
+                  @update:modelValue="search"/>
         <v-btn :disabled="!searchValid" color="primary" type="submit">Search</v-btn>
       </v-form>
       <v-divider :thickness="2" class="border-opacity-75"/>
-      <!-- TODO -->
       <v-list>
         <v-list-item
             v-for="r in searchResults"
             :key="r.id"
-            :title="r.title"
             @click="id = r.id"
         >
+          <v-list-item-subtitle v-text="formatDate(r.accessed)"/>
+          <v-list-item-title v-text="r.title"/>
 
           <v-chip-group>
             <v-chip

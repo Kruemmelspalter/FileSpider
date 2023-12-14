@@ -1,20 +1,20 @@
-use chrono::NaiveDateTime;
-use eyre::eyre;
-use eyre::Result;
-use flate2::write::GzEncoder;
-use flate2::Compression;
-use mac_address::get_mac_address;
-use pdf::file::FileOptions;
-use sqlx::{query, Row, SqlitePool};
 use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
 
 #[cfg(target_os = "linux")]
 use std::sync::Arc;
-
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
+
+use chrono::NaiveDateTime;
+use eyre::eyre;
+use eyre::Result;
+use flate2::Compression;
+use flate2::write::GzEncoder;
+use mac_address::get_mac_address;
+use pdf::file::FileOptions;
+use sqlx::{query, Row, SqlitePool};
 use tokio::process::Command;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -71,13 +71,19 @@ pub async fn search(
     page_length: u32,
     sort: SearchSorting,
 ) -> Result<Vec<Meta>> {
-    // TODO sort
+
+    use SearchSortCriterium::*;
+
     let query_str = format!(
         "select id from Document left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as posTags on posTags.document = Document.id left join (select document, count(tag) as tagCount from Tag where tag in {} group by document) as negTags on negTags.document = document.id where {} and (negTags.tagCount = 0 or negTags.tagCount is null) and Document.title like ?  order by {} {} limit ?, ?",
         if pos_filter.is_empty() { "()".to_string() } else { format!("(?{})", ", ?".repeat(pos_filter.len() - 1)) },
         if neg_filter.is_empty() { "()".to_string() } else { format!("(?{})", ", ?".repeat(neg_filter.len() - 1)) },
         if pos_filter.is_empty() { "(posTags.tagCount = ? or posTags.tagCount is null)" } else { "posTags.tagCount = ?" },
-        match sort.0 { SearchSortCriterium::CreationTime => "Document.added" },
+        match sort.0 {
+            CreationTime => "Document.added",
+            AccessTime => "Document.accessed",
+            Title => "Document.title",
+        },
         if sort.1 { "asc" } else { "desc" }
     );
 
@@ -126,15 +132,16 @@ pub async fn create(
     let doc_type_str = doc_type.unwrap_or(DocType::Plain).to_string();
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u32;
     query!(
-        "insert into Document (id, title, type, added, file_extension) values (?, ?, ?, ?, ?)",
+        "insert into Document (id, title, type, added, file_extension, accessed) values (?, ?, ?, ?, ?, ?)",
         id,
         title,
         doc_type_str,
         timestamp,
-        extension
+        extension,
+        timestamp,
     )
-    .execute(pool)
-    .await?;
+        .execute(pool)
+        .await?;
 
     for tag in tags {
         query!("insert into Tag (document, tag) values (?, ?)", id, tag)
@@ -165,13 +172,13 @@ pub async fn import_pdf(
         } else {
             crop_box.top - crop_box.bottom
         }
-        .abs();
+            .abs();
         let h = if page.rotate == 0 || page.rotate == 180 {
             crop_box.top - crop_box.bottom
         } else {
             crop_box.right - crop_box.left
         }
-        .abs();
+            .abs();
 
         encoder.write_all(format!("<page width=\"{w}\" height=\"{h}\"><background type=\"pdf\" pageno=\"{}\" {}/><layer/></page>",
                                   i + 1, if i == 0 { "domain=\"absolute\" filename=\"bg.pdf\"" } else { "" },
@@ -191,22 +198,23 @@ pub async fn import_pdf(
         file,
         format!("{}/{}", get_document_directory(&id)?, "bg.pdf"),
     )
-    .await?;
+        .await?;
 
     tokio::fs::write(get_document_file(&id, &extension)?, xopp_contents).await?;
 
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u32;
     let doc_type = DocType::XournalPP.to_string();
     query!(
-        "insert into Document (id, title, type, added, file_extension) values (?, ?, ?, ?, ?)",
+        "insert into Document (id, title, type, added, file_extension, accessed) values (?, ?, ?, ?, ?, ?)",
         id,
         title,
         doc_type,
         timestamp,
-        extension
+        extension,
+        timestamp
     )
-    .execute(pool)
-    .await?;
+        .execute(pool)
+        .await?;
 
     for tag in tags {
         query!("insert into Tag (document, tag) values (?, ?)", id, tag)
@@ -220,11 +228,11 @@ pub async fn get_meta(pool: &SqlitePool, id: Uuid) -> Result<Meta> {
     document_exists(&id).await?;
 
     let doc_res = query!(
-        "select title, type, added, file_extension from Document where id = ?",
+        "select title, type, added, file_extension, accessed from Document where id = ?",
         id
     )
-    .fetch_one(pool)
-    .await?;
+        .fetch_one(pool)
+        .await?;
 
     let tags = query!("select tag from Tag where document = ?", id)
         .map(|x| x.tag)
@@ -235,17 +243,8 @@ pub async fn get_meta(pool: &SqlitePool, id: Uuid) -> Result<Meta> {
         title: doc_res.title,
         doc_type: DocType::from_str(&doc_res.r#type)?,
         tags,
-        created: NaiveDateTime::from_timestamp_millis(doc_res.added).unwrap(),
-        accessed: NaiveDateTime::from_timestamp_millis(
-            tokio::fs::metadata(get_document_file(&id, &doc_res.file_extension)?)
-                .await?
-                .accessed()?
-                .duration_since(UNIX_EPOCH)?
-                .as_millis()
-                .try_into()
-                .unwrap(),
-        )
-        .unwrap(),
+        created: doc_res.added,
+        accessed: doc_res.accessed,
         id,
         extension: doc_res.file_extension,
     })
@@ -327,9 +326,9 @@ pub async fn delete(pool: &SqlitePool, id: Uuid) -> Result<()> {
         id,
         id
     )
-    .execute(pool)
-    .await?
-    .rows_affected()
+        .execute(pool)
+        .await?
+        .rows_affected()
         == 0
     {
         return Err(eyre!("no rows affected"));
@@ -345,9 +344,9 @@ pub async fn get_tags(pool: &SqlitePool, crib: String) -> Result<Vec<String>> {
         "select distinct tag from Tag where tag like '%' || ? || '%'",
         crib
     )
-    .map(|x| x.tag)
-    .fetch_all(pool)
-    .await?)
+        .map(|x| x.tag)
+        .fetch_all(pool)
+        .await?)
 }
 
 pub async fn show_render_in_explorer(
@@ -385,7 +384,7 @@ pub async fn show_render_in_explorer(
     #[cfg(target_os = "windows")]
     unsafe {
         use windows::{
-            core::{s, PCSTR},
+            core::{PCSTR, s},
             Win32::UI::{Shell::ShellExecuteA, WindowsAndMessaging::SW_SHOW},
         };
 
@@ -411,6 +410,25 @@ pub async fn show_render_in_explorer(
     {
         Command::new("open").args(vec!["-R", render.0]).spawn()?;
     }
+
+    Ok(())
+}
+
+pub async fn update_accessed(pool: &SqlitePool, id: Uuid) -> Result<()> {
+    document_exists(&id).await?;
+
+    let time = match NaiveDateTime::from_timestamp_millis(SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as i64) {
+        Some(t) => t,
+        None => return Err(eyre!("failed to get time")),
+    };
+
+    query!(
+        "update Document set accessed = ? where id = ?",
+        time,
+        id
+    )
+        .execute(pool)
+        .await?;
 
     Ok(())
 }

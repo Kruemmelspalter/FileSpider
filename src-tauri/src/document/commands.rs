@@ -127,6 +127,14 @@ pub async fn show_render_in_explorer(
     ).await.map_err(|x| format!("{x:#?}"))
 }
 
+#[tauri::command]
+pub async fn update_accessed(
+    state: State<'_, FilespiderState>,
+    id: Uuid,
+) -> Result<(), String> {
+    document::update_accessed(&*state.pool.lock().await, id).await.map_err(|x| format!("{x:#?}"))
+}
+
 pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
     PluginBuilder::new("document").invoke_handler(tauri::generate_handler![
             search,
@@ -139,5 +147,6 @@ pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
             delete,
             get_tags,
             show_render_in_explorer,
+            update_accessed,
         ]).build()
 }

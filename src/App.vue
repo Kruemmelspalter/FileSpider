@@ -19,8 +19,8 @@ type DocMeta = {
   id: string,
   title: string,
   docType: string,
-  created: string,
-  accessed: string,
+  created: Date,
+  accessed: Date,
   tags: string[],
   extension: string | undefined,
 }
@@ -29,6 +29,8 @@ const id = ref<string | undefined>(undefined);
 
 const meta = computedAsync<DocMeta | undefined>(async () => {
   if (id.value === undefined) return undefined;
+
+  await invoke('plugin:document|update_accessed', {id: id.value});
   return <DocMeta | undefined>(await invoke('plugin:document|get_meta', {id: id.value})
       .catch(error => {
         addAlert("Error while fetching document meta", <string>error, "error", true, 10000)
@@ -233,18 +235,36 @@ const searchValid = ref(false);
 
 const searchResults = ref<DocMeta[]>([]);
 
+const page = ref(0);
+const pageLength = ref(10);
+
+const sorting = ref('AccessTime');
+
+async function getSearchResults() {
+  if (posTags.value.length !== 0) {
+
+    let res = await invoke('plugin:document|search', {
+      posFilter: posTags.value,
+      negFilter: negTags.value,
+      crib: titleCrib.value,
+      page: page.value,
+      pageLength: pageLength.value,
+      sort: [sorting.value, false]
+    })
+        .catch(error =>
+            addAlert("Error while searching", <string>error, "error", true, 10000)
+        );
+    searchResults.value = <DocMeta[]>res;
+  }
+  if (searchResults.value.length == 0 && page.value > 0) {
+    page.value = 0;
+    await getSearchResults()
+  }
+}
+
 async function search() {
-  await invoke('plugin:document|search', {
-    posFilter: posTags.value,
-    negFilter: negTags.value,
-    crib: titleCrib.value,
-    page: 0,
-    pageLength: 10,
-    sort: ["CreationTime", false]
-  })
-      .catch(error =>
-          addAlert("Error while searching", <string>error, "error", true, 10000)
-      ).then(res => searchResults.value = <DocMeta[]>res)
+  page.value = 0;
+  await getSearchResults()
 }
 
 async function openEditor() {
@@ -262,6 +282,12 @@ async function showRenderInExplorer() {
           addAlert("Error while opening file explorer", <string>error, "error", true, 10000)
       );
 }
+
+function formatDate(date: any): String {
+  return Intl.DateTimeFormat(navigator.language,
+      {dateStyle: 'short', timeStyle: 'short'},
+  ).format(new Date(date));
+}
 </script>
 
 <template>
@@ -278,22 +304,25 @@ async function showRenderInExplorer() {
       <v-form v-model="searchValid" class="pa-2" @submit.prevent="search">
         <v-combobox v-model="posTags"
                     v-model:search="posTagsSearch" :items="posTagsSuggestions" :rules="[v => v.length !== 0]" chips
-                    clearable density="compact" label="Positive Tags" multiple outlined/>
-        <v-combobox v-model="negTags" v-model:search="negTagsSearch"
+                    clearable density="compact" label="Positive Tags" multiple outlined
+                    @update:modelValue="search"/>
+        <v-combobox v-model="negTags" v-model:search="negTagsSearch" @update:modelValue="search"
                     :items="negTagsSuggestions" chips clearable density="compact" label="Negative Tags"
                     multiple outlined/>
-        <v-text-field v-model="titleCrib" label="Title Crib" outlined/>
+        <v-text-field v-model="titleCrib" label="Title Crib" outlined @update:modelValue="search"/>
+        <v-select v-model="sorting" :items="['AccessTime', 'CreationTime', 'Title']" label="Sorting" outlined
+                  @update:modelValue="search"/>
         <v-btn :disabled="!searchValid" color="primary" type="submit">Search</v-btn>
       </v-form>
       <v-divider :thickness="2" class="border-opacity-75"/>
-      <!-- TODO -->
       <v-list>
         <v-list-item
             v-for="r in searchResults"
             :key="r.id"
-            :title="r.title"
             @click="id = r.id"
         >
+          <v-list-item-subtitle v-text="formatDate(r.accessed)"/>
+          <v-list-item-title v-text="r.title"/>
 
           <v-chip-group>
             <v-chip
@@ -308,6 +337,23 @@ async function showRenderInExplorer() {
 
         </v-list-item>
       </v-list>
+      <v-spacer/>
+      <div class="my-2 d-flex">
+        <v-spacer/>
+        <v-select v-model="pageLength" hide-details :items="[10, 25, 50, 100]" dense style="width: 5%;"
+                  @change="getSearchResults"/>
+        <v-spacer/>
+      </div>
+      <div class="my-2 d-flex align-center">
+        <v-spacer/>
+
+        <v-icon icon="fas fa-angle-left" size="x-large"
+                :style="page == 0 ? {'filter': 'contrast(20%)', 'cursor':'default '} : {}"
+                @click="page!== 0 ? (()=>{page--; getSearchResults()})() : undefined"/>
+        <span class="mx-2">{{ page + 1 }}</span>
+        <v-icon icon="fas fa-angle-right" size="x-large" @click="page++; getSearchResults()"/>
+        <v-spacer/>
+      </div>
     </v-navigation-drawer>
 
     <v-system-bar class="py-3" color="primary">

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "select title, type, added, file_extension from Document where id = ?",
+  "query": "select title, type, added, file_extension, accessed from Document where id = ?",
   "describe": {
     "columns": [
       {
@@ -16,12 +16,17 @@
       {
         "name": "added",
         "ordinal": 2,
-        "type_info": "Int64"
+        "type_info": "Datetime"
       },
       {
         "name": "file_extension",
         "ordinal": 3,
         "type_info": "Text"
+      },
+      {
+        "name": "accessed",
+        "ordinal": 4,
+        "type_info": "Datetime"
       }
     ],
     "parameters": {
@@ -31,8 +36,9 @@
       false,
       false,
       false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "35620010335dbe8c9da33a41d7199011220c7397d1510571003eae53b6112548"
+  "hash": "e58f100e6f31be949e116a6d5b82edf69d2c96f7edce76ab537db30d2ac2b0af"
 }

@@ -42,8 +42,8 @@ pub enum DocType {
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub enum SearchSortCriterium {
     CreationTime,
-    // AccessTime,
-    // Title
+    AccessTime,
+    Title,
 }
 
 /// bool is true for ascending, false for descending

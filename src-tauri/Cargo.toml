@@ -2,10 +2,18 @@
 name = "filespider"
 version = "0.0.0"
 description = "A Tauri App"
-authors = ["you"]
+authors = ["Kruemmelspalter"]
 license = ""
 repository = ""
 edition = "2021"
+
+[[bin]]
+name = "migrator"
+path = "src/bin/migrator.rs"
+
+[lib]
+name = "filespider"
+path = "src/lib.rs"
 
 
 [profile.dev.package."*"]
@@ -40,8 +48,9 @@ async-trait = "0.1.74"
 tempfile = "3.8.0"
 log = "0.4.20"
 env_logger = "0.10.0"
-pdf = "0.8.1"
+pdf = "0.9.0"
 flate2 = "1.0.28"
+clap = { version = "4.4.11", features = ["derive"] }
 
 [target.'cfg(target_os="windows")'.dependencies]
 windows = { version = "0.52.0", features = ["Win32_UI_Shell", "Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }

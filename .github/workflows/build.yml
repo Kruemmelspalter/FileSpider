@@ -51,10 +51,12 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         if: matrix.os == 'ubuntu-latest'
+        name: filespider-${{matrix.rust}}.deb
         with:
           path: filespider-${{matrix.rust}}.deb
       - uses: actions/upload-artifact@v4
         if: matrix.os == 'ubuntu-latest'
+        name: filespider-${{matrix.rust}}.AppImage
         with:
           path: filespider-${{matrix.rust}}.AppImage
 
@@ -66,9 +68,11 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         if: matrix.os == 'windows-latest'
+        name: filespider-${{matrix.rust}}.msi
         with:
           path: filespider-${{matrix.rust}}.msi
       - uses: actions/upload-artifact@v4
         if: matrix.os == 'windows-latest'
+        name: filespider-${{matrix.rust}}.msi
         with:
           path: filespider-${{matrix.rust}}.exe

@@ -8,6 +8,10 @@ repository = ""
 edition = "2021"
 
 [[bin]]
+name = "filespider"
+path = "src/main.rs"
+
+[[bin]]
 name = "migrator"
 path = "src/bin/migrator.rs"
 

@@ -5,6 +5,7 @@ use chrono::NaiveDateTime;
 use eyre::eyre;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use crate::settings::Settings;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct Meta {
@@ -31,7 +32,7 @@ pub enum RenderType {
     Pdf,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub enum DocType {
     Plain,
     Markdown,
@@ -101,12 +102,12 @@ impl Display for DocType {
 }
 
 impl DocType {
-    pub fn get_editor(&self) -> (&str, Vec<&str>) {
+    pub fn get_editor(&self, settings: &Settings) -> (String, Vec<String>) {
         match self {
-            DocType::Plain => ("kate", vec!["-b"]),
-            DocType::Markdown => ("kate", vec!["-b"]),
-            DocType::XournalPP => ("xournalpp", vec![]),
-            DocType::LaTeX => ("kate", vec!["-b"]),
+            DocType::Plain => settings.text_editor.clone(),
+            DocType::Markdown => settings.text_editor.clone(),
+            DocType::XournalPP => ("xournalpp".to_string(), vec![]),
+            DocType::LaTeX => settings.text_editor.clone(),
         }
     }
 }

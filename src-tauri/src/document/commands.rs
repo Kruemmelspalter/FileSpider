@@ -87,6 +87,7 @@ pub async fn render(
 pub async fn open_editor(state: State<'_, FilespiderState>, id: Uuid) -> Result<bool, String> {
     document::open_editor(
         &*state.pool.lock().await,
+        &*state.settings.lock().await,
         &mut *state.editors.lock().await,
         id,
     ).await.map_err(|x| format!("{x:#?}"))

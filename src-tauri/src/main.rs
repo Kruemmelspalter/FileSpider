@@ -3,6 +3,7 @@
 
 use eyre::Result;
 use filespider::*;
+use filespider::settings::Settings;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -22,8 +23,10 @@ async fn main() -> Result<()> {
         log::error!("Lost connection to D-Bus: {}", err);
     });
 
+    let settings = Settings::load().await?;
+
     tauri::Builder::default()
-        .manage(FilespiderState::new(pool, #[cfg(target_os = "linux")] conn))
+        .manage(FilespiderState::new(pool, settings, #[cfg(target_os = "linux")] conn))
         .plugin(document::commands::plugin())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

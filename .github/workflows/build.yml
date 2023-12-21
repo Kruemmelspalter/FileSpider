@@ -80,7 +80,7 @@ jobs:
   migrator:
     strategy:
       matrix:
-        rust: [ stable, nightly ]
+        rust: [ nightly ]
         os: [ ubuntu-latest, windows-latest ]
 
     defaults:

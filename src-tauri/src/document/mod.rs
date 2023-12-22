@@ -14,6 +14,7 @@ use flate2::Compression;
 use flate2::write::GzEncoder;
 use mac_address::get_mac_address;
 use pdf::file::FileOptions;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use sqlx::{query, Row, SqlitePool};
 use tokio::process::Command;
 use tokio::sync::Mutex;
@@ -23,6 +24,7 @@ use uuid::Uuid;
 use crate::directories::get_cache_directory;
 use crate::directories::get_filespider_directory;
 use crate::document::render::Hash;
+use crate::settings::Settings;
 use crate::types::*;
 
 pub mod commands;
@@ -110,23 +112,32 @@ pub async fn search(
         .collect()
 }
 
+
+#[derive(Serialize, Deserialize, Clone)]
+pub enum File {
+    None,
+    Path(String),
+    Blob(Vec<u8>),
+}
+
 pub async fn create(
     pool: &SqlitePool,
     title: String,
     doc_type: Option<DocType>,
     tags: Vec<String>,
     extension: Option<String>,
-    file: Option<String>,
+    file: File,
 ) -> Result<Uuid> {
     let id: Uuid = Uuid::now_v1(&get_mac_address()?.map(|x| x.bytes()).unwrap_or([0x69u8; 6]));
 
     tokio::fs::create_dir(get_document_directory(&id)?).await?;
 
     match file {
-        Some(path) => tokio::fs::copy(path, get_document_file(&id, &extension)?)
+        File::Path(path) => tokio::fs::copy(path, get_document_file(&id, &extension)?)
             .await
             .map(|_| ()),
-        None => tokio::fs::write(get_document_file(&id, &extension)?, [0u8; 0]).await,
+        File::Blob(b) => tokio::fs::write(get_document_file(&id, &extension)?, b).await,
+        File::None => tokio::fs::write(get_document_file(&id, &extension)?, [0u8; 0]).await,
     }?;
 
     let doc_type_str = doc_type.unwrap_or(DocType::Plain).to_string();
@@ -253,6 +264,7 @@ pub async fn get_meta(pool: &SqlitePool, id: Uuid) -> Result<Meta> {
 /// returns Ok(false) if editor is already running, if editor got spawned it returns Ok(true)
 pub async fn open_editor(
     pool: &SqlitePool,
+    settings: &Settings,
     editors: &mut HashMap<Uuid, tokio::process::Child>,
     id: Uuid,
 ) -> Result<bool> {
@@ -270,9 +282,8 @@ pub async fn open_editor(
 
     editors.insert(
         id,
-        Command::new(meta.doc_type.get_editor().0)
-            .args(meta.doc_type.get_editor().1)
-            .arg(get_document_file(&meta.id, &meta.extension)?)
+        Command::new(meta.doc_type.get_editor(settings).0)
+            .args(meta.doc_type.get_editor(settings).1.iter().map(|s| s.replace("%FILE%", &get_document_file(&meta.id, &meta.extension).unwrap())).collect::<Vec<_>>())
             .spawn()?,
     );
 

@@ -6,7 +6,8 @@ use sqlx::sqlite::{SqliteConnectOptions, SqliteRow};
 use sqlx::{Row, SqlitePool};
 use tokio::process::Command;
 
-use filespider::{db, directories};
+use filespider::{db, directories, document::File};
+
 
 #[derive(Parser, Debug)]
 #[command()]
@@ -51,7 +52,7 @@ async fn main() -> Result<()> {
                 "tex" | "latex" => filespider::types::DocType::LaTeX,
                 "xournal" | "xournalpp" => filespider::types::DocType::XournalPP,
                 _ => filespider::types::DocType::Plain,
-            }), tags, res.try_get("fileExtension").map(|s| Some(s)).unwrap_or(None), None).await?;
+            }), tags, res.try_get("fileExtension").map(|s| Some(s)).unwrap_or(None), File::None).await?;
 
             Ok(())
         })

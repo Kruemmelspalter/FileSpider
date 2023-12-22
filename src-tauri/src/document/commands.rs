@@ -38,7 +38,7 @@ pub async fn create(
     doc_type: Option<DocType>,
     tags: Vec<String>,
     extension: Option<String>,
-    file: Option<String>,
+    file: document::File,
 ) -> Result<Uuid, String> {
     document::create(
         &*state.pool.lock().await,
@@ -87,6 +87,7 @@ pub async fn render(
 pub async fn open_editor(state: State<'_, FilespiderState>, id: Uuid) -> Result<bool, String> {
     document::open_editor(
         &*state.pool.lock().await,
+        &*state.settings.lock().await,
         &mut *state.editors.lock().await,
         id,
     ).await.map_err(|x| format!("{x:#?}"))

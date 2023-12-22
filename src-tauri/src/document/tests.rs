@@ -29,7 +29,7 @@ async fn tests() {
             Some(DocType::Plain),
             vec!["test".to_string(), "abc".to_string()],
             None,
-            None,
+            File::None,
         )
             .await?;
 

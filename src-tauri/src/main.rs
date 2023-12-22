@@ -28,6 +28,7 @@ async fn main() -> Result<()> {
     tauri::Builder::default()
         .manage(FilespiderState::new(pool, settings, #[cfg(target_os = "linux")] conn))
         .plugin(document::commands::plugin())
+        .plugin(settings::commands::plugin())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 

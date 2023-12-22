@@ -1,10 +1,13 @@
-pub mod commands;
-
 use eyre::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::directories::get_filespider_directory;
+use crate::document;
+use crate::document::File;
+use crate::document::File::Blob;
 use crate::types::DocType;
+
+pub mod commands;
 
 #[derive(Serialize, Deserialize)]
 pub struct Settings {
@@ -30,7 +33,12 @@ impl Settings {
         Ok(Self {
             text_editor: (editor.0.to_string(), editor.1.into_iter().map(|s| s.to_string()).collect()),
             presets: vec![
-                DocumentPreset::from_strs("LaTeX", vec![], Some("tex"), DocType::LaTeX),
+                DocumentPreset::from_strs(
+                    "LaTeX",
+                    vec![],
+                    Some("tex"),
+                    Some(DocType::LaTeX), Some(include_bytes!("../../assets/latex_template.tex"))),
+                DocumentPreset::from_strs("XOPP", vec![], Some("xopp"), Some(DocType::XournalPP), Some(include_bytes!("../../assets/xopp_template.xopp"))),
             ],
             file_watcher: false,
         })
@@ -65,16 +73,18 @@ pub struct DocumentPreset {
     pub name: String,
     pub tags: Vec<String>,
     pub extension: Option<String>,
-    pub doc_type: DocType,
+    pub doc_type: Option<DocType>,
+    pub file: document::File,
 }
 
 impl DocumentPreset {
-    pub fn from_strs(name: &str, tags: Vec<&str>, extension: Option<&str>, doc_type: DocType) -> Self {
+    pub fn from_strs(name: &str, tags: Vec<&str>, extension: Option<&str>, doc_type: Option<DocType>, blob: Option<&[u8]>) -> Self {
         Self {
             name: name.to_string(),
             tags: tags.into_iter().map(|s| s.to_string()).collect(),
             extension: extension.map(|s| s.to_string()),
             doc_type,
+            file: if let Some(blob) = blob { Blob(blob.into_iter().map(|r| *r).collect()) } else { File::None },
         }
     }
 }

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import {Ref, ref, VNode, watch} from "vue";
+import {onMounted, Ref, ref, VNode, watch} from "vue";
 import {computedAsync} from "@vueuse/core";
 
 import {invoke} from "@tauri-apps/api";
@@ -10,7 +10,9 @@ import TauriFileInput from "./components/TauriFileInput.vue";
 
 // noinspection JSUnusedGlobalSymbols
 const vVisible = {
-  updated(el: HTMLElement, binding: { value: boolean }, _vnode: VNode, _prevVnode: VNode) {
+  updated(el: HTMLElement, binding: {
+    value: boolean
+  }, _vnode: VNode, _prevVnode: VNode) {
     el.style.visibility = binding.value ? "visible" : "hidden";
   }
 }
@@ -157,7 +159,11 @@ const createValid = ref(false);
 const createData = ref<{
   title: string,
   tags: string[],
-  file: string | undefined,
+  file: {
+    Path: string
+  } | {
+    Blob: [number]
+  } | undefined,
   tagSearch: string,
   docType: "Plain" | "Html" | "Markdown" | "LaTeX" | "XournalPP",
   extension: string,
@@ -288,6 +294,46 @@ function formatDate(date: any): String {
       {dateStyle: 'short', timeStyle: 'short'},
   ).format(new Date(date));
 }
+
+const presets = ref<[{
+  name: string,
+  tags: [string],
+  extension: string | null,
+  doc_type: "Plain" | "Html" | "Markdown" | "LaTeX" | "XournalPP" | null,
+  file: {Path: string} | {Blob: [number]} | undefined,
+}] | null>(null);
+
+onMounted(async () => {
+  presets.value = <[{
+    name: string,
+    tags: [string],
+    extension: string | null,
+    doc_type: "Plain" | "Html" | "Markdown" | "LaTeX" | "XournalPP" | null,
+    file: {
+      Path: string
+    } | {
+      Blob: [number]
+    } | undefined,
+  }] | null>(await invoke('plugin:settings|get_presets')
+      .catch(error =>
+          addAlert("Error while fetching presets", <string>error, "error", true, 10000)
+      ));
+})
+
+async function applyPreset(preset: string) {
+  let p = presets.value?.find(p => p.name === preset);
+
+  if (p === undefined) return;
+
+  if ((<number>p.tags.length) !== 0) createData.value.tags = createData.value.tags.concat(p.tags);
+
+  if (p.extension !== null) createData.value.extension = p.extension;
+
+  if (p.doc_type !== null) createData.value.docType = p.doc_type;
+
+  if (p.file !== undefined) createData.value.file = p.file;
+}
+
 </script>
 
 <template>
@@ -435,6 +481,8 @@ function formatDate(date: any): String {
                           label="Extension (without leading dot)"
                           outlined/>
               <tauri-file-input v-model="createData.file" btn-text="Choose File"/>
+              <br>
+              <v-select @update:model-value="n => n ? applyPreset(n): {}" :items="presets?.map(p => p.name)"/>
             </v-form>
             <v-form v-else-if="createTab === 'import'" v-model="createValid" class="pa-4">
               <v-text-field v-model="createData.title" :rules="[v => v.trim() !== '']" label="Title"

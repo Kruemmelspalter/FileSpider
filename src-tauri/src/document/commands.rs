@@ -38,7 +38,7 @@ pub async fn create(
     doc_type: Option<DocType>,
     tags: Vec<String>,
     extension: Option<String>,
-    file: Option<String>,
+    file: document::File,
 ) -> Result<Uuid, String> {
     document::create(
         &*state.pool.lock().await,

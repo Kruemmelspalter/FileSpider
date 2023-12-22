@@ -14,6 +14,7 @@ use flate2::Compression;
 use flate2::write::GzEncoder;
 use mac_address::get_mac_address;
 use pdf::file::FileOptions;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use sqlx::{query, Row, SqlitePool};
 use tokio::process::Command;
 use tokio::sync::Mutex;
@@ -111,23 +112,32 @@ pub async fn search(
         .collect()
 }
 
+
+#[derive(Serialize, Deserialize, Clone)]
+pub enum File {
+    None,
+    Path(String),
+    Blob(Vec<u8>),
+}
+
 pub async fn create(
     pool: &SqlitePool,
     title: String,
     doc_type: Option<DocType>,
     tags: Vec<String>,
     extension: Option<String>,
-    file: Option<String>,
+    file: File,
 ) -> Result<Uuid> {
     let id: Uuid = Uuid::now_v1(&get_mac_address()?.map(|x| x.bytes()).unwrap_or([0x69u8; 6]));
 
     tokio::fs::create_dir(get_document_directory(&id)?).await?;
 
     match file {
-        Some(path) => tokio::fs::copy(path, get_document_file(&id, &extension)?)
+        File::Path(path) => tokio::fs::copy(path, get_document_file(&id, &extension)?)
             .await
             .map(|_| ()),
-        None => tokio::fs::write(get_document_file(&id, &extension)?, [0u8; 0]).await,
+        File::Blob(b) => tokio::fs::write(get_document_file(&id, &extension)?, b).await,
+        File::None => tokio::fs::write(get_document_file(&id, &extension)?, [0u8; 0]).await,
     }?;
 
     let doc_type_str = doc_type.unwrap_or(DocType::Plain).to_string();

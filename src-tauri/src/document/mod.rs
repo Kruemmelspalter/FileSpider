@@ -16,6 +16,7 @@ use mac_address::get_mac_address;
 use pdf::file::FileOptions;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use sqlx::{query, Row, SqlitePool};
+use sqlx::sqlite::SqliteRow;
 use tokio::process::Command;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -103,7 +104,7 @@ pub async fn search(
         .bind(page * page_length)
         .bind(page_length);
 
-    let docs: Vec<Uuid> = query.map(|x| x.get("id")).fetch_all(pool).await?;
+    let docs: Vec<Uuid> = query.map(|x: SqliteRow| x.get("id")).fetch_all(pool).await?;
 
     futures::future::join_all(docs.into_iter().map(|id| get_meta(pool, id)))
         .await

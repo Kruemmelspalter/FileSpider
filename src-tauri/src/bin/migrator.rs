@@ -2,8 +2,8 @@ use std::str::FromStr;
 
 use clap::Parser;
 use eyre::Result;
-use sqlx::sqlite::{SqliteConnectOptions, SqliteRow};
-use sqlx::{Row, SqlitePool};
+use sqlx::{MySqlPool, Row};
+use sqlx::mysql::{MySqlConnectOptions, MySqlRow};
 use tokio::process::Command;
 
 use filespider::{db, directories, document::File};
@@ -30,21 +30,21 @@ async fn main() -> Result<()> {
     sqlx::migrate!().run(&pool_new).await?;
 
     let pool_old =
-        SqlitePool::connect_with(SqliteConnectOptions::from_str(&args.mysql_url)?.read_only(true))
+        MySqlPool::connect_with(MySqlConnectOptions::from_str(&args.mysql_url)?)
             .await?;
 
     let mut conn = pool_old.acquire().await?.detach();
 
     let rt = tokio::runtime::Runtime::new()?;
 
-    sqlx::query("select id, title, renderer, fileExtension from Document").map(move |res: SqliteRow| {
+    sqlx::query("select id, title, renderer, fileExtension from Document").map(move |res: MySqlRow| {
 
         // this can probably done better using proper async but I couldn't figure out how to do it
         rt.block_on(
         async {
             let tags = sqlx::query("select tag from Tag where document = ?")
                 .bind::<String>(res.get("id"))
-                .map(|res: SqliteRow| res.get("tag"))
+                .map(|res: MySqlRow| res.get("tag"))
                 .fetch_all(&mut conn).await?;
 
             filespider::document::create(&pool_new, res.get("title"), Some(match res.get("renderer") {

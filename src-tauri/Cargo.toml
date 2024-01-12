@@ -37,13 +37,7 @@ tokio = { version = "1.32.0", features = ["full"] }
 uuid = { version = "1.4.1", features = ["serde", "v1"] }
 eyre = "0.6.8"
 chrono = { version = "0.4.31", features = ["serde"] }
-sqlx = { version = "0.7.2", features = [
-    "sqlite",
-    "runtime-tokio-native-tls",
-    "chrono",
-    "mac_address",
-    "uuid",
-] }
+sqlx = { version = "0.7.2", features = ["sqlite", "runtime-tokio-native-tls", "chrono", "mac_address", "uuid", "mysql"] }
 mac_address = { version = "1.1.5", features = ["serde"] }
 futures = "0.3.28"
 fxhash = { version = "0.2.1", features = [] }

@@ -1090,6 +1090,7 @@ version = "2.0.0-2"
 dependencies = [
  "async-recursion",
  "async-trait",
+ "base64 0.21.7",
  "chrono",
  "clap",
  "dbus",

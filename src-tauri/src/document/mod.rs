@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use std::io::Write;
 use std::str::FromStr;
-
 #[cfg(target_os = "linux")]
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
+use base64::prelude::*;
 use chrono::NaiveDateTime;
 use eyre::eyre;
 use eyre::Result;
@@ -14,7 +14,7 @@ use flate2::Compression;
 use flate2::write::GzEncoder;
 use mac_address::get_mac_address;
 use pdf::file::FileOptions;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use sqlx::{query, Row, SqlitePool};
 use tokio::process::Command;
 use tokio::sync::Mutex;
@@ -73,7 +73,6 @@ pub async fn search(
     page_length: u32,
     sort: SearchSorting,
 ) -> Result<Vec<Meta>> {
-
     use SearchSortCriterium::*;
 
     let query_str = format!(
@@ -112,11 +111,25 @@ pub async fn search(
         .collect()
 }
 
+fn as_base64<T, S>(key: &T, serializer: S) -> Result<<S as Serializer>::Ok, S::Error>
+    where T: AsRef<[u8]>,
+          S: Serializer
+{
+    serializer.serialize_str(&BASE64_STANDARD.encode(key.as_ref()))
+}
+
+fn from_base64<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
+    where D: Deserializer<'de>
+{
+    let s = String::deserialize(deserializer)?;
+    BASE64_STANDARD.decode(s.as_bytes()).map_err(serde::de::Error::custom)
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub enum File {
     None,
     Path(String),
+    #[serde(serialize_with = "as_base64", deserialize_with = "from_base64")]
     Blob(Vec<u8>),
 }
 

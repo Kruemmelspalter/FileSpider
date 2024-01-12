@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 #[cfg(target_os = "linux")]
 use std::sync::Arc;
-use clap::ArgAction::Set;
 
 use sqlx::SqlitePool;
 use tokio::process;
@@ -23,7 +22,7 @@ pub mod settings;
 pub struct FilespiderState {
     pool: Mutex<SqlitePool>,
     editors: Mutex<HashMap<Uuid, process::Child>>,
-    renderers: Mutex<HashMap<(Uuid, document::render::Hash), Mutex<JoinHandle<()>>>>,
+    #[allow(clippy::type_complexity)] renderers: Mutex<HashMap<(Uuid, document::render::Hash), Mutex<JoinHandle<()>>>>,
     settings: Mutex<Settings>,
     #[cfg(target_os = "linux")] dbus: Mutex<Arc<dbus::nonblock::SyncConnection>>,
 }

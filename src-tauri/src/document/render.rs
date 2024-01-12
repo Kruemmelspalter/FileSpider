@@ -11,6 +11,7 @@ use async_trait::async_trait;
 use eyre::eyre;
 use eyre::Result;
 use eyre::WrapErr;
+use log::debug;
 use sqlx::{query, SqliteConnection, SqlitePool};
 use tokio::{sync::Mutex, task::JoinHandle};
 use tokio::io::AsyncWriteExt;
@@ -108,7 +109,8 @@ pub async fn render(
             "select render_type from Cache where document = ? and hash = unhex(?)",
             id,
             hex_hash
-        ).map(|r| RenderType::from_str(r.render_type.as_str())).fetch_one(pool).await??,
+        ).map(|r| RenderType::from_str(r.render_type.as_str())).fetch_one(pool).await
+            .wrap_err("renderer didn't insert into cache")??,
     )
 }
 
@@ -116,11 +118,15 @@ fn get_from_cache(id: Uuid, render_type: RenderType) -> Result<(String, RenderTy
     Ok((get_cache_file(id)?, render_type))
 }
 
+#[allow(clippy::unused_io_amount)]
 async fn render_task(meta: Meta, hash: Hash, mut connection: SqliteConnection) {
     let renderer = get_renderer_from_doc_type(&meta.doc_type);
     if let Err(e) = renderer.render(meta.id, hash, &mut connection, &meta).await {
-        tokio::fs::File::options().append(true).create(true).open(get_cache_file(meta.id).unwrap()).await.unwrap().write(format!("{:#?}", e).as_bytes()).await.unwrap();
-        tokio::fs::write(get_cache_file(meta.id).unwrap(), e.to_string()).await.unwrap();
+        debug!("Writing error {:?} to file", e);
+        tokio::fs::remove_file(get_cache_file(meta.id).unwrap()).await.unwrap();
+        tokio::fs::File::options().create(true).write(true)
+            .open(get_cache_file(meta.id).unwrap()).await.unwrap()
+            .write(format!("{:?}", e).as_bytes()).await.unwrap();
         insert_into_cache(&mut connection, meta.id, hash, RenderType::Plain).await.unwrap();
     };
 }

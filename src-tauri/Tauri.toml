@@ -7,7 +7,7 @@ withGlobalTauri = true
 
 [package]
 productName = "filespider"
-version = "2.0.0-1"
+version = "2.0.0-2"
 
 [tauri.allowlist]
 all = false
@@ -34,8 +34,7 @@ csp = "default-src 'self'; img-src 'self' asset: https://asset.localhost"
 fullscreen = false
 resizable = true
 title = "FileSpider"
-width = 800
-height = 600
+maximized = true
 
 [tauri.allowlist.dialog]
 open = true

@@ -1,6 +1,6 @@
 [package]
 name = "filespider"
-version = "0.0.0"
+version = "2.0.0-2"
 description = "A Tauri App"
 authors = ["Kruemmelspalter"]
 license = ""

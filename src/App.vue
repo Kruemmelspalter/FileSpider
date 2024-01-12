@@ -7,6 +7,7 @@ import {convertFileSrc} from "@tauri-apps/api/tauri";
 import {VTextField} from "vuetify/components";
 import {readTextFile} from "@tauri-apps/api/fs";
 import TauriFileInput from "./components/TauriFileInput.vue";
+import {appWindow} from "@tauri-apps/api/window";
 
 // noinspection JSUnusedGlobalSymbols
 const vVisible = {
@@ -179,7 +180,6 @@ const createSuggestTags = computedAsync<string[]>(async () => {
 
 async function createDocument() {
   if (createTab.value === "create") {
-    console.log(createData.value.file);
     // noinspection ES6MissingAwait
     await (<Promise<string>>invoke('plugin:document|create', {
       title: createData.value.title,
@@ -304,6 +304,7 @@ const presets = ref<[{
 }] | null>(null);
 
 onMounted(async () => {
+  sidebarIsOpen.value = await appWindow.isMaximized();
   presets.value = <[{
     name: string,
     tags: [string],
@@ -340,9 +341,10 @@ async function applyPreset(preset: string) {
   <v-app id="filespider">
     <div class="position-fixed " style="bottom: 2vh; right: 2vh; max-width: 50vw">
       <!--suppress TypeScriptValidateTypes -->
-      <v-alert v-for="alert in alerts" key="alert" :closable="alert[3]" :text="alert[1]" :title="alert[0]"
+      <v-alert v-for="alert in alerts" key="alert" :closable="alert[3]" :title="alert[0]"
                :type="alert[2]"
                class="my-2">
+        <pre v-text="alert[1]"/>
       </v-alert>
     </div>
 

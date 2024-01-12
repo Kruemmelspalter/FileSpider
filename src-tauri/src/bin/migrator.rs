@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
                 "tex" | "latex" => filespider::types::DocType::LaTeX,
                 "xournal" | "xournalpp" => filespider::types::DocType::XournalPP,
                 _ => filespider::types::DocType::Plain,
-            }), tags, res.try_get("fileExtension").map(|s| Some(s)).unwrap_or(None), File::None).await?;
+            }), tags, res.try_get("fileExtension").map(Some).unwrap_or(None), File::None).await?;
 
             Ok(())
         })

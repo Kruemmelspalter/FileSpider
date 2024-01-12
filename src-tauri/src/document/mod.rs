@@ -14,7 +14,7 @@ use flate2::Compression;
 use flate2::write::GzEncoder;
 use mac_address::get_mac_address;
 use pdf::file::FileOptions;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use sqlx::{query, Row, SqlitePool};
 use tokio::process::Command;
 use tokio::sync::Mutex;
@@ -367,8 +367,6 @@ pub async fn show_render_in_explorer(
     #[cfg(target_os = "linux")] dbus: Arc<dbus::nonblock::SyncConnection>,
 ) -> Result<()> {
     document_exists(&id).await?;
-
-    // let meta = get_meta(pool, id).await?;
 
     let render = render::render(pool, renderers, id).await?;
 

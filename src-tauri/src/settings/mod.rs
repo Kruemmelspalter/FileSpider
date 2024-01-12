@@ -1,4 +1,4 @@
-use eyre::Result;
+use eyre::{eyre, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::directories::get_filespider_directory;
@@ -27,7 +27,7 @@ impl Settings {
         } else if cfg!(windows) {
             ("start", vec!["%FILE%"])
         } else {
-            panic!();
+            return Err(eyre!("no default editor for macos"))
         };
 
         Ok(Self {
@@ -84,7 +84,7 @@ impl DocumentPreset {
             tags: tags.into_iter().map(|s| s.to_string()).collect(),
             extension: extension.map(|s| s.to_string()),
             doc_type,
-            file: if let Some(blob) = blob { Blob(blob.into_iter().map(|r| *r).collect()) } else { File::None },
+            file: if let Some(blob) = blob { Blob(blob.to_vec()) } else { File::None },
         }
     }
 }

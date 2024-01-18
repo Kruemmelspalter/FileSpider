@@ -1,6 +1,10 @@
 with import <nixpkgs> { };
+let
+  filespider = pkgs.callPackage ./filespider.nix {};
+in
 mkShell {
   nativeBuildInputs = with pkgs; [
+    filespider
     rustup
     cargo-tauri
     

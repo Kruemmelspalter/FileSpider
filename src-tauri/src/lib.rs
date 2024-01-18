@@ -24,14 +24,14 @@ pub struct FilespiderState {
     editors: Mutex<HashMap<Uuid, process::Child>>,
     #[allow(clippy::type_complexity)] renderers: Mutex<HashMap<(Uuid, document::render::Hash), Mutex<JoinHandle<()>>>>,
     settings: Mutex<Settings>,
-    #[cfg(target_os = "linux")] dbus: Mutex<Arc<dbus::nonblock::SyncConnection>>,
+    #[cfg(target_os = "linux")] dbus: Mutex<Option<Arc<dbus::nonblock::SyncConnection>>>,
 }
 
 impl FilespiderState {
     pub fn new(
         pool: SqlitePool,
         settings: Settings,
-        #[cfg(target_os = "linux")] dbus: Arc<dbus::nonblock::SyncConnection>,
+        #[cfg(target_os = "linux")] dbus: Option<Arc<dbus::nonblock::SyncConnection>>,
     ) -> Self {
         Self {
             pool: Mutex::new(pool),

@@ -1,9 +1,12 @@
+use std::sync::Arc;
+use dbus::nonblock::SyncConnection;
 use eyre::Result;
 use tauri::{
     plugin::{Builder as PluginBuilder, TauriPlugin},
     Runtime,
 };
 use tauri::State;
+use tokio::sync::MutexGuard;
 use uuid::Uuid;
 
 use crate::document;
@@ -120,11 +123,17 @@ pub async fn show_render_in_explorer(
     state: State<'_, FilespiderState>,
     id: Uuid,
 ) -> Result<(), String> {
+    #[cfg(target_os="linux")]
+    return match state.dbus.lock().await.as_ref() {
+        None => Err("D-Bus not available".to_string()),
+        Some(dbus) =>
+                document::show_render_in_explorer(&*state.pool.lock().await, &mut * state.renderers.lock().await, id, dbus.clone()).await.map_err(|x| format!("{x:?}")),
+    };
+    #[cfg(not(target_os="linux"))]
     document::show_render_in_explorer(
         &*state.pool.lock().await,
         &mut *state.renderers.lock().await,
-        id,
-        #[cfg(target_os = "linux")]state.dbus.lock().await.clone(),
+        id
     ).await.map_err(|x| format!("{x:?}"))
 }
 

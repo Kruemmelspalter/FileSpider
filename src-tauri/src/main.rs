@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use eyre::Result;
+use log::error;
 use filespider::*;
 use filespider::settings::Settings;
 
@@ -16,12 +17,19 @@ async fn main() -> Result<()> {
     let pool = db::init().await?;
     sqlx::migrate!().run(&pool).await?;
     #[cfg(target_os = "linux")]
-        let (resource, conn) = dbus_tokio::connection::new_session_sync()?;
+        let (resource, conn) = match dbus_tokio::connection::new_session_sync() {
+        Ok((r, c)) => (Some(r), Some(c)),
+        Err(e) => {
+            error!("Failed to connect to D-Bus, continuing without it: {:?}", e);
+            (None, None)
+        }
+    };
     #[cfg(target_os = "linux")]
+    if let Some(resource) = resource {
     tokio::spawn(async {
         let err = resource.await;
         log::error!("Lost connection to D-Bus: {}", err);
-    });
+    });}
 
     let settings = Settings::load().await?;
 

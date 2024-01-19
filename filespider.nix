@@ -18,7 +18,7 @@ let
     owner = "Kruemmelspalter";
     repo = name;
     rev = version;
-    hash = lib.fakeSha256    
+    hash = "sha256-nPBu2lfltd/EthfV3GIOl+Zj8gqQR0jZ6dZgnOAS55E=";  
   };
   frontend-builder = callPackage ./frontend.nix {};
   frontend-build = frontend-builder source;

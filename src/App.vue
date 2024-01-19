@@ -164,11 +164,11 @@ const createData = ref<{
     Path: string
   } | {
     Blob: [number]
-  } | undefined,
+  } | "None",
   tagSearch: string,
   docType: "Plain" | "Html" | "Markdown" | "LaTeX" | "XournalPP",
   extension: string,
-}>({title: "", tags: [], file: undefined, tagSearch: "", docType: "Plain", extension: ""});
+}>({title: "", tags: [], file: "None", tagSearch: "", docType: "Plain", extension: ""});
 
 const createSuggestTags = computedAsync<string[]>(async () => {
   if (createData.value.tagSearch.trim() === '') return [];
@@ -300,7 +300,7 @@ const presets = ref<[{
   tags: [string],
   extension: string | null,
   doc_type: "Plain" | "Html" | "Markdown" | "LaTeX" | "XournalPP" | null,
-  file: {Path: string} | {Blob: [number]} | undefined,
+  file: {Path: string} | {Blob: [number]} | "None" | undefined,
 }] | null>(null);
 
 onMounted(async () => {
@@ -314,7 +314,7 @@ onMounted(async () => {
       Path: string
     } | {
       Blob: [number]
-    } | undefined,
+    } | "None" | undefined,
   }] | null>(await invoke('plugin:settings|get_presets')
       .catch(error =>
           addAlert("Error while fetching presets", <string>error, "error", true, 10000)
@@ -332,7 +332,7 @@ async function applyPreset(preset: string) {
 
   if (p.doc_type !== null) createData.value.docType = p.doc_type;
 
-  if (p.file !== undefined) createData.value.file = p.file;
+  if (p.file !== undefined && p.file !== "None") createData.value.file = p.file;
 }
 
 </script>

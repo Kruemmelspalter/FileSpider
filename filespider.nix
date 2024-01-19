@@ -12,16 +12,13 @@
   stdenv, lib, callPackage, cargo-tauri, dpkg }:
 let
   fs = lib.fileset;
-  sourceFiles = fs.difference ./. (fs.unions [
-    (fs.maybeMissing ./src-tauri/target)
-    (fs.maybeMissing ./node_modules)
-    (fs.maybeMissing ./dist)
-  ]);
-  version = "2.0.0-2";
+  version = "nix-build";
   name = "filespider";
-  source = lib.fileset.toSource {
-      root = ./.;
-      fileset = sourceFiles;
+  source = fetchFromGitHub {
+    owner = "Kruemmelspalter";
+    repo = name;
+    rev = version;
+    hash = lib.fakeSha256    
   };
   frontend-builder = callPackage ./frontend.nix {};
   frontend-build = frontend-builder source;
@@ -36,7 +33,7 @@ rustPlatform.buildRustPackage rec {
   pname = name;
   src = source + "/src-tauri";
 
-  buildInputs = [ dbus openssl freetype libsoup gtk3 webkitgtk cmake cargo-tauri dpkg];
+  buildInputs = [ dbus openssl freetype libsoup gtk3 webkitgtk cmake cargo-tauri dpkg ];
   nativeBuildInputs = [ pkg-config ];
 
   lockFile = src + "/Cargo.lock";

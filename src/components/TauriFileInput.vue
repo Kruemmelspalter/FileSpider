@@ -6,7 +6,7 @@ import {dialog} from "@tauri-apps/api";
 
 const props = defineProps<{
   btnText?: string,
-  modelValue?: { Path: string } | { Blob: [number] } | undefined
+  modelValue?: { Path: string } | { Blob: [number] } | "None"
 }>()
 const dialogOpen = ref(false);
 
@@ -20,7 +20,7 @@ async function openFileChooser() {
   if (typeof res === 'string') {
     emit('update:model-value', {Path: res});
   } else {
-    emit('update:model-value', undefined);
+    emit('update:model-value', "None");
   }
 }
 

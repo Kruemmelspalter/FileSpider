@@ -122,8 +122,7 @@ fn get_from_cache(id: Uuid, render_type: RenderType) -> Result<(String, RenderTy
 async fn render_task(meta: Meta, hash: Hash, mut connection: SqliteConnection) {
     let renderer = get_renderer_from_doc_type(&meta.doc_type);
     if let Err(e) = renderer.render(meta.id, hash, &mut connection, &meta).await {
-        debug!("Writing error {:?} to file", e);
-        tokio::fs::remove_file(get_cache_file(meta.id).unwrap()).await.unwrap();
+        if let Ok(true) = tokio::fs::try_exists(get_cache_file(meta.id)) { tokio::fs::remove_file(get_cache_file(meta.id).unwrap()).await.unwrap() };
         tokio::fs::File::options().create(true).write(true)
             .open(get_cache_file(meta.id).unwrap()).await.unwrap()
             .write(format!("{:?}", e).as_bytes()).await.unwrap();

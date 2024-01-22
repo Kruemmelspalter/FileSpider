@@ -1,15 +1,19 @@
-{ cmake
-  , dbus
+{ lib
   , fetchFromGitHub
   , fetchYarnDeps
+  , mkYarnPackage
+  , callPackage
+  , cargo-tauri
+  , dpkg
+  , cmake
+  , dbus
   , freetype
   , gtk3
   , libsoup
-  , mkYarnPackage
   , openssl
   , pkg-config
-  , webkitgtk,
-  stdenv, lib, callPackage, cargo-tauri, dpkg }:
+  , webkitgtk
+  }:
 let
   fs = lib.fileset;
   version = "nix-build";
@@ -20,8 +24,23 @@ let
     rev = version;
     hash = "sha256-nPBu2lfltd/EthfV3GIOl+Zj8gqQR0jZ6dZgnOAS55E=";  
   };
-  frontend-builder = callPackage ./frontend.nix {};
-  frontend-build = frontend-builder source;
+  frontend-build = mkYarnPackage rec {
+    src = source;
+
+    offlineCache = fetchYarnDeps {
+     yarnLock = src + "/yarn.lock";
+     sha256 = "sha256-ts5WW422nUboTRp29jZ58gx+5aIPcPz/jjzR3Wo5zZU=";
+    };
+
+    packageJSON =  src + "/package.json";
+    buildPhase = ''
+     export HOME=$(mktemp -d)
+     yarn run --offline build
+     cp -r deps/filespider/dist $out
+    '';
+    distPhase = "true";
+    dontInstall = true;
+    };
   mkRustPlatform = callPackage ./rust-nightly.nix {};
   rustPlatform = mkRustPlatform {
     date = "2024-01-01";
@@ -42,11 +61,6 @@ rustPlatform.buildRustPackage rec {
     inherit lockFile;
   };
 
-  patchPhase = ''
-    ls ${frontend-build.outPath}
-
-  '';
-
   buildPhase = ''
     ${cargo-tauri.outPath}/bin/cargo-tauri build -b deb \
       -c '{"build" : {"distDir": "${frontend-build.outPath}", "beforeBuildCommand": "true"}}'
@@ -54,7 +68,8 @@ rustPlatform.buildRustPackage rec {
 
   installPhase = ''
     ${dpkg.outPath}/bin/dpkg-deb -x target/release/bundle/deb/*.deb $out
-    mv $out/usr/bin $out/bin
+    mv $out/usr/* $out
+    mv $out/bin/migrator $out/bin/filespider-migrate
   '';
 
 }

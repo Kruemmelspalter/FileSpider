@@ -28,7 +28,7 @@ icon = [
 ]
 
 [tauri.security]
-csp = "default-src 'self'; img-src 'self' asset: https://asset.localhost; style-src 'unsafe-inline'"
+csp = "default-src 'self'; img-src 'self' asset: https://asset.localhost; style-src 'unsafe-inline'; object-src 'self' asset: https://asset.localhost asset://localhost"
 
 [[tauri.windows]]
 fullscreen = false

@@ -1,13 +1,9 @@
-use std::sync::Arc;
-#[cfg(target_os="linux")]
-use dbus::nonblock::SyncConnection;
 use eyre::Result;
 use tauri::{
     plugin::{Builder as PluginBuilder, TauriPlugin},
     Runtime,
 };
 use tauri::State;
-use tokio::sync::MutexGuard;
 use uuid::Uuid;
 
 use crate::document;

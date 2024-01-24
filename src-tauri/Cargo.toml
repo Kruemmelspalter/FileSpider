@@ -1,6 +1,6 @@
 [package]
 name = "filespider"
-version = "2.0.0-2"
+version = "2.0.0-3"
 description = "A Tauri App"
 authors = ["Kruemmelspalter"]
 license = ""
@@ -45,7 +45,7 @@ async-recursion = "1.0.5"
 async-trait = "0.1.74"
 tempfile = "3.8.0"
 log = "0.4.20"
-env_logger = "0.10.0"
+env_logger = "0.11.0"
 pdf = "0.9.0"
 flate2 = "1.0.28"
 clap = { version = "4.4.11", features = ["derive"] }

@@ -2,7 +2,6 @@ use eyre::{eyre, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::directories::get_filespider_directory;
-use crate::document;
 use crate::document::File;
 use crate::document::File::Blob;
 use crate::types::DocType;
@@ -74,7 +73,7 @@ pub struct DocumentPreset {
     pub tags: Vec<String>,
     pub extension: Option<String>,
     pub doc_type: Option<DocType>,
-    pub file: document::File,
+    pub file: File,
 }
 
 impl DocumentPreset {

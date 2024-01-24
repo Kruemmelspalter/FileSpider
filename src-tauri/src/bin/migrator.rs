@@ -5,9 +5,9 @@ use eyre::Result;
 use sqlx::{MySqlPool, Row};
 use sqlx::mysql::{MySqlConnectOptions, MySqlRow};
 use tokio::process::Command;
+use uuid::Uuid;
 
 use filespider::{db, directories, document::File};
-
 
 #[derive(Parser, Debug)]
 #[command()]
@@ -37,25 +37,35 @@ async fn main() -> Result<()> {
 
     let x = sqlx::query("select id, title, renderer, fileExtension from Document").fetch_all(&pool_old).await?;
     for r in x {
-            let tags = sqlx::query("select tag from Tag where document = ?")
-                .bind::<String>(r.get("id"))
-                .map(|res: MySqlRow| res.get("tag"))
-                .fetch_all(&mut conn).await?;
-            filespider::document::create(&pool_new, r.get("title"), Some(match r.get("renderer") {
-                "markdown" => filespider::types::DocType::Markdown,
-                "tex" | "latex" => filespider::types::DocType::LaTeX,
-                "xournal" | "xournalpp" => filespider::types::DocType::XournalPP,
-                _ => filespider::types::DocType::Plain,
-            }), tags, r.try_get("fileExtension").map(Some).unwrap_or(None), File::None).await?;
+        let tags = sqlx::query("select tag from Tag where document = ?")
+            .bind::<String>(r.get("id"))
+            .map(|res: MySqlRow| res.get("tag"))
+            .fetch_all(&mut conn).await?;
+        let id = filespider::document::create(&pool_new, r.get("title"), Some(match r.get("renderer") {
+            "markdown" => filespider::types::DocType::Markdown,
+            "tex" | "latex" => filespider::types::DocType::LaTeX,
+            "xournal" | "xournalpp" => filespider::types::DocType::XournalPP,
+            _ => filespider::types::DocType::Plain,
+        }), tags, r.try_get("fileExtension").map(Some).unwrap_or(None), File::None).await?;
+
+        let docdir = filespider::document::get_document_directory(&id)?;
+        let old_id = r.get::<Uuid, &str>("id");
+        if !Command::new("sh")
+            .arg("-c")
+            .arg(format!("cp -r {}/{}/* {} && mv {}/{} {}/{}",
+                         args.document_directory,
+                         old_id,
+                         docdir,
+                         docdir,
+                         old_id,
+                         docdir,
+                         id))
+            .spawn()?
+            .wait().await?.success() {
+            return Err(eyre::eyre!("Failed to copy files of document {} to {}", old_id, id));
+        }
     }
 
-    if !Command::new("sh")
-        .arg("-c")
-        .arg(format!("cp -r {}/*-*-*-*-* {}", args.document_directory, directories::get_filespider_directory()?))
-        .spawn()?
-        .wait().await?.success() {
-        return Err(eyre::eyre!("Failed to copy files"));
-    }
 
     Ok(())
 }

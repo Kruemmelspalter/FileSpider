@@ -21,7 +21,7 @@ async fn tests() {
 
         directories::create_directories().await?;
 
-        assert!(!document_exists(&uuid::uuid!("a346b1e3-2c11-4c72-87b1-122bfcc43560")).await.is_ok(), "random document exists");
+        assert!(document_exists(&uuid::uuid!("a346b1e3-2c11-4c72-87b1-122bfcc43560")).await.is_err(), "random document exists");
 
         let id = create(
             &pool,
@@ -72,7 +72,7 @@ async fn tests() {
         )
             .await?;
 
-        assert_ne!(res.get(0), None, "search didn't return anything");
+        assert_ne!(res.first(), None, "search didn't return anything");
 
         assert_eq!(res[0].title, "exam", "search returned something else");
 
@@ -91,7 +91,7 @@ async fn tests() {
         Ok::<(), eyre::Report>(())
     }
         .await {
-        assert!(false, "Error: {}", e)
+        panic!("Error: {}", e);
     }
     drop(dtmp);
 }

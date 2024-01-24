@@ -41,7 +41,7 @@ async fn document_exists(id: &Uuid) -> Result<()> {
     }
 }
 
-fn get_document_directory(id: &Uuid) -> Result<String> {
+pub fn get_document_directory(id: &Uuid) -> Result<String> {
     Ok(format!("{}/{}", get_filespider_directory()?, id))
 }
 

@@ -69,6 +69,7 @@ rustPlatform.buildRustPackage rec {
   installPhase = ''
     ${dpkg.outPath}/bin/dpkg-deb -x target/release/bundle/deb/*.deb $out
     mv $out/usr/* $out
+    rmdir $out/usr
     mv $out/bin/migrator $out/bin/filespider-migrate
   '';
 

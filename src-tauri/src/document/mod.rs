@@ -10,13 +10,13 @@ use base64::prelude::*;
 use chrono::NaiveDateTime;
 use eyre::eyre;
 use eyre::Result;
-use flate2::Compression;
 use flate2::write::GzEncoder;
+use flate2::Compression;
 use mac_address::get_mac_address;
 use pdf::file::FileOptions;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use sqlx::{query, Row, SqlitePool};
 use sqlx::sqlite::SqliteRow;
+use sqlx::{query, Row, SqlitePool};
 use tokio::process::Command;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -104,7 +104,10 @@ pub async fn search(
         .bind(page * page_length)
         .bind(page_length);
 
-    let docs: Vec<Uuid> = query.map(|x: SqliteRow| x.get("id")).fetch_all(pool).await?;
+    let docs: Vec<Uuid> = query
+        .map(|x: SqliteRow| x.get("id"))
+        .fetch_all(pool)
+        .await?;
 
     futures::future::join_all(docs.into_iter().map(|id| get_meta(pool, id)))
         .await
@@ -113,17 +116,21 @@ pub async fn search(
 }
 
 fn as_base64<T, S>(key: &T, serializer: S) -> Result<<S as Serializer>::Ok, S::Error>
-    where T: AsRef<[u8]>,
-          S: Serializer
+where
+    T: AsRef<[u8]>,
+    S: Serializer,
 {
     serializer.serialize_str(&BASE64_STANDARD.encode(key.as_ref()))
 }
 
 fn from_base64<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
-    where D: Deserializer<'de>
+where
+    D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    BASE64_STANDARD.decode(s.as_bytes()).map_err(serde::de::Error::custom)
+    BASE64_STANDARD
+        .decode(s.as_bytes())
+        .map_err(serde::de::Error::custom)
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -197,13 +204,13 @@ pub async fn import_pdf(
         } else {
             crop_box.top - crop_box.bottom
         }
-            .abs();
+        .abs();
         let h = if page.rotate == 0 || page.rotate == 180 {
             crop_box.top - crop_box.bottom
         } else {
             crop_box.right - crop_box.left
         }
-            .abs();
+        .abs();
 
         encoder.write_all(format!("<page width=\"{w}\" height=\"{h}\"><background type=\"pdf\" pageno=\"{}\" {}/><layer/></page>",
                                   i + 1, if i == 0 { "domain=\"absolute\" filename=\"bg.pdf\"" } else { "" },
@@ -223,7 +230,7 @@ pub async fn import_pdf(
         file,
         format!("{}/{}", get_document_directory(&id)?, "bg.pdf"),
     )
-        .await?;
+    .await?;
 
     tokio::fs::write(get_document_file(&id, &extension)?, xopp_contents).await?;
 
@@ -256,8 +263,8 @@ pub async fn get_meta(pool: &SqlitePool, id: Uuid) -> Result<Meta> {
         "select title, type, added, file_extension, accessed from Document where id = ?",
         id
     )
-        .fetch_one(pool)
-        .await?;
+    .fetch_one(pool)
+    .await?;
 
     let tags = query!("select tag from Tag where document = ?", id)
         .map(|x| x.tag)
@@ -297,7 +304,19 @@ pub async fn open_editor(
     editors.insert(
         id,
         Command::new(meta.doc_type.get_editor(settings).0)
-            .args(meta.doc_type.get_editor(settings).1.iter().map(|s| s.replace("%FILE%", &get_document_file(&meta.id, &meta.extension).unwrap())).collect::<Vec<_>>())
+            .args(
+                meta.doc_type
+                    .get_editor(settings)
+                    .1
+                    .iter()
+                    .map(|s| {
+                        s.replace(
+                            "%FILE%",
+                            &get_document_file(&meta.id, &meta.extension).unwrap(),
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            )
             .spawn()?,
     );
 
@@ -351,9 +370,9 @@ pub async fn delete(pool: &SqlitePool, id: Uuid) -> Result<()> {
         id,
         id
     )
-        .execute(pool)
-        .await?
-        .rows_affected()
+    .execute(pool)
+    .await?
+    .rows_affected()
         == 0
     {
         return Err(eyre!("no rows affected"));
@@ -369,9 +388,9 @@ pub async fn get_tags(pool: &SqlitePool, crib: String) -> Result<Vec<String>> {
         "select distinct tag from Tag where tag like '%' || ? || '%'",
         crib
     )
-        .map(|x| x.tag)
-        .fetch_all(pool)
-        .await?)
+    .map(|x| x.tag)
+    .fetch_all(pool)
+    .await?)
 }
 
 pub async fn show_render_in_explorer(
@@ -407,7 +426,7 @@ pub async fn show_render_in_explorer(
     #[cfg(target_os = "windows")]
     unsafe {
         use windows::{
-            core::{PCSTR, s},
+            core::{s, PCSTR},
             Win32::UI::{Shell::ShellExecuteA, WindowsAndMessaging::SW_SHOW},
         };
 
@@ -440,16 +459,14 @@ pub async fn show_render_in_explorer(
 pub async fn update_accessed(pool: &SqlitePool, id: Uuid) -> Result<()> {
     document_exists(&id).await?;
 
-    let time = match NaiveDateTime::from_timestamp_millis(SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as i64) {
+    let time = match NaiveDateTime::from_timestamp_millis(
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as i64,
+    ) {
         Some(t) => t,
         None => return Err(eyre!("failed to get time")),
     };
 
-    query!(
-        "update Document set accessed = ? where id = ?",
-        time,
-        id
-    )
+    query!("update Document set accessed = ? where id = ?", time, id)
         .execute(pool)
         .await?;
 

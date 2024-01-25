@@ -26,7 +26,6 @@ async function openFileChooser() {
 
 const displayString = computed(() => {
 
-
   if ((props.modelValue as any)?.Path !== undefined) {
     return (props.modelValue as {Path: string}).Path.split('/').pop();
   }
@@ -44,7 +43,7 @@ const displayString = computed(() => {
       {{ btnText }}
     </v-btn>
     <span v-if="modelValue" class="ma-1" v-text="displayString"/>
-    <v-icon v-if="modelValue" class="ma-1" icon="fas fa-xmark-circle" @click="$emit('update:model-value', undefined)"/>
+    <v-icon v-if="modelValue != 'None'" class="ma-1" icon="fas fa-xmark-circle" @click="$emit('update:model-value', 'None')"/>
   </div>
 </template>
 

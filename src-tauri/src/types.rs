@@ -5,6 +5,7 @@ use chrono::NaiveDateTime;
 use eyre::eyre;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
 use crate::settings::Settings;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -96,7 +97,7 @@ impl Display for DocType {
             DocType::XournalPP => "xopp",
             DocType::LaTeX => "tex",
         }
-            .to_string();
+        .to_string();
         write!(f, "{}", str)
     }
 }

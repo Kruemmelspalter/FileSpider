@@ -19,25 +19,39 @@ impl Settings {
     pub async fn default() -> Result<Self> {
         let editor = if tokio::process::Command::new("which")
             .arg("kate")
-            .status().await?.success() {
+            .status()
+            .await?
+            .success()
+        {
             ("kate", vec!["-b", "%FILE%"])
         } else if cfg!(linux) {
             ("xdg-open", vec!["%FILE%"])
         } else if cfg!(windows) {
             ("start", vec!["%FILE%"])
         } else {
-            return Err(eyre!("no default editor for macos"))
+            return Err(eyre!("no default editor for macos"));
         };
 
         Ok(Self {
-            text_editor: (editor.0.to_string(), editor.1.into_iter().map(|s| s.to_string()).collect()),
+            text_editor: (
+                editor.0.to_string(),
+                editor.1.into_iter().map(|s| s.to_string()).collect(),
+            ),
             presets: vec![
                 DocumentPreset::from_strs(
                     "LaTeX",
                     vec![],
                     Some("tex"),
-                    Some(DocType::LaTeX), Some(include_bytes!("../../assets/latex_template.tex"))),
-                DocumentPreset::from_strs("XOPP", vec![], Some("xopp"), Some(DocType::XournalPP), Some(include_bytes!("../../assets/xopp_template.xopp"))),
+                    Some(DocType::LaTeX),
+                    Some(include_bytes!("../../assets/latex_template.tex")),
+                ),
+                DocumentPreset::from_strs(
+                    "XOPP",
+                    vec![],
+                    Some("xopp"),
+                    Some(DocType::XournalPP),
+                    Some(include_bytes!("../../assets/xopp_template.xopp")),
+                ),
             ],
             file_watcher: false,
         })
@@ -77,13 +91,23 @@ pub struct DocumentPreset {
 }
 
 impl DocumentPreset {
-    pub fn from_strs(name: &str, tags: Vec<&str>, extension: Option<&str>, doc_type: Option<DocType>, blob: Option<&[u8]>) -> Self {
+    pub fn from_strs(
+        name: &str,
+        tags: Vec<&str>,
+        extension: Option<&str>,
+        doc_type: Option<DocType>,
+        blob: Option<&[u8]>,
+    ) -> Self {
         Self {
             name: name.to_string(),
             tags: tags.into_iter().map(|s| s.to_string()).collect(),
             extension: extension.map(|s| s.to_string()),
             doc_type,
-            file: if let Some(blob) = blob { Blob(blob.to_vec()) } else { File::None },
+            file: if let Some(blob) = blob {
+                Blob(blob.to_vec())
+            } else {
+                File::None
+            },
         }
     }
 }
@@ -93,7 +117,6 @@ pub fn get_config_file() -> Result<String> {
 }
 
 pub async fn save_config(settings: &Settings) -> Result<()> {
-    tokio::fs::write(get_config_file()?,
-                     json5::to_string(&settings)?).await?;
+    tokio::fs::write(get_config_file()?, json5::to_string(&settings)?).await?;
     Ok(())
 }

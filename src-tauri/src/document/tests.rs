@@ -2,8 +2,8 @@ use tempfile::tempdir;
 use tokio::test;
 
 use crate::directories;
-use crate::document::*;
 use crate::document::render::render;
+use crate::document::*;
 
 #[test]
 async fn tests() {
@@ -21,7 +21,12 @@ async fn tests() {
 
         directories::create_directories().await?;
 
-        assert!(document_exists(&uuid::uuid!("a346b1e3-2c11-4c72-87b1-122bfcc43560")).await.is_err(), "random document exists");
+        assert!(
+            document_exists(&uuid::uuid!("a346b1e3-2c11-4c72-87b1-122bfcc43560"))
+                .await
+                .is_err(),
+            "random document exists"
+        );
 
         let id = create(
             &pool,
@@ -31,29 +36,36 @@ async fn tests() {
             None,
             File::None,
         )
-            .await?;
+        .await?;
 
         let meta = get_meta(&pool, id).await?;
 
-        assert!(meta.title == "Test"
-                    && meta.doc_type == DocType::Plain
-                    && meta.tags.contains(&"test".to_string())
-                    && meta.tags.contains(&"abc".to_string()),
-                "meta {:?} does not match", meta);
+        assert!(
+            meta.title == "Test"
+                && meta.doc_type == DocType::Plain
+                && meta.tags.contains(&"test".to_string())
+                && meta.tags.contains(&"abc".to_string()),
+            "meta {:?} does not match",
+            meta
+        );
 
         patch_meta(&pool, id, MetaPatch::AddTag("amogus".to_string())).await?;
 
         let meta = get_meta(&pool, id).await?;
 
-        assert!(meta.tags.contains(&"amogus".to_string()), "failed to add tag");
-
+        assert!(
+            meta.tags.contains(&"amogus".to_string()),
+            "failed to add tag"
+        );
 
         patch_meta(&pool, id, MetaPatch::RemoveTag("abc".to_string())).await?;
 
         let meta = get_meta(&pool, id).await?;
 
-        assert!(!meta.tags.contains(&"abc".to_string()), "failed to remove tag");
-
+        assert!(
+            !meta.tags.contains(&"abc".to_string()),
+            "failed to remove tag"
+        );
 
         patch_meta(&pool, id, MetaPatch::ChangeTitle("exam".to_string())).await?;
 
@@ -70,14 +82,17 @@ async fn tests() {
             1,
             (SearchSortCriterium::CreationTime, false),
         )
-            .await?;
+        .await?;
 
         assert_ne!(res.first(), None, "search didn't return anything");
 
         assert_eq!(res[0].title, "exam", "search returned something else");
 
         let tags_res = get_tags(&pool, "te".to_string()).await?;
-        assert!(tags_res.len() == 1 && tags_res[0] == "test", "tag search failed");
+        assert!(
+            tags_res.len() == 1 && tags_res[0] == "test",
+            "tag search failed"
+        );
 
         tokio::fs::write(get_document_file(&meta.id, &meta.extension)?, "testogus").await?;
 
@@ -90,7 +105,8 @@ async fn tests() {
 
         Ok::<(), eyre::Report>(())
     }
-        .await {
+    .await
+    {
         panic!("Error: {}", e);
     }
     drop(dtmp);

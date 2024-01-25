@@ -7,7 +7,7 @@ withGlobalTauri = true
 
 [package]
 productName = "filespider"
-version = "2.0.0-2"
+version = "2.0.0-3"
 
 [tauri.allowlist]
 all = false
@@ -28,7 +28,7 @@ icon = [
 ]
 
 [tauri.security]
-csp = "default-src 'self'; img-src 'self' asset: https://asset.localhost"
+csp = "default-src 'self'; img-src 'self' asset: https://asset.localhost; style-src 'unsafe-inline'; object-src 'self' asset: https://asset.localhost asset://localhost"
 
 [[tauri.windows]]
 fullscreen = false

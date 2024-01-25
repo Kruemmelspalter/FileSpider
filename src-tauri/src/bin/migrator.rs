@@ -2,12 +2,12 @@ use std::str::FromStr;
 
 use clap::Parser;
 use eyre::Result;
-use sqlx::{MySqlPool, Row};
 use sqlx::mysql::{MySqlConnectOptions, MySqlRow};
+use sqlx::{MySqlPool, Row};
 use tokio::process::Command;
+use uuid::Uuid;
 
 use filespider::{db, directories, document::File};
-
 
 #[derive(Parser, Debug)]
 #[command()]
@@ -17,7 +17,6 @@ struct Args {
 
     #[arg()]
     document_directory: String,
-
 }
 
 #[tokio::main]
@@ -29,42 +28,53 @@ async fn main() -> Result<()> {
     let pool_new = db::init().await?;
     sqlx::migrate!().run(&pool_new).await?;
 
-    let pool_old =
-        MySqlPool::connect_with(MySqlConnectOptions::from_str(&args.mysql_url)?)
-            .await?;
+    let pool_old = MySqlPool::connect_with(MySqlConnectOptions::from_str(&args.mysql_url)?).await?;
 
     let mut conn = pool_old.acquire().await?.detach();
 
-    let rt = tokio::runtime::Runtime::new()?;
-
-    sqlx::query("select id, title, renderer, fileExtension from Document").map(move |res: MySqlRow| {
-
-        // this can probably done better using proper async but I couldn't figure out how to do it
-        rt.block_on(
-        async {
-            let tags = sqlx::query("select tag from Tag where document = ?")
-                .bind::<String>(res.get("id"))
-                .map(|res: MySqlRow| res.get("tag"))
-                .fetch_all(&mut conn).await?;
-
-            filespider::document::create(&pool_new, res.get("title"), Some(match res.get("renderer") {
+    let x = sqlx::query("select id, title, renderer, fileExtension from Document")
+        .fetch_all(&pool_old)
+        .await?;
+    for r in x {
+        let tags = sqlx::query("select tag from Tag where document = ?")
+            .bind::<String>(r.get("id"))
+            .map(|res: MySqlRow| res.get("tag"))
+            .fetch_all(&mut conn)
+            .await?;
+        let id = filespider::document::create(
+            &pool_new,
+            r.get("title"),
+            Some(match r.get("renderer") {
                 "markdown" => filespider::types::DocType::Markdown,
                 "tex" | "latex" => filespider::types::DocType::LaTeX,
                 "xournal" | "xournalpp" => filespider::types::DocType::XournalPP,
                 _ => filespider::types::DocType::Plain,
-            }), tags, res.try_get("fileExtension").map(Some).unwrap_or(None), File::None).await?;
+            }),
+            tags,
+            r.try_get("fileExtension").map(Some).unwrap_or(None),
+            File::None,
+        )
+        .await?;
 
-            Ok(())
-        })
-    }).fetch_all(&pool_old).await?.into_iter().collect::<Result<_>>()?;
-
-    if !Command::new("cp")
-        .arg("-r")
-        .arg(format!("{}/*-*-*-*-*", args.document_directory))
-        .arg(directories::get_filespider_directory()?)
-        .spawn()?
-        .wait().await?.success() {
-        return Err(eyre::eyre!("Failed to copy files"));
+        let docdir = filespider::document::get_document_directory(&id)?;
+        let old_id = r.get::<Uuid, &str>("id");
+        if !Command::new("sh")
+            .arg("-c")
+            .arg(format!(
+                "cp -r {}/{}/* {} && mv {}/{} {}/{}",
+                args.document_directory, old_id, docdir, docdir, old_id, docdir, id
+            ))
+            .spawn()?
+            .wait()
+            .await?
+            .success()
+        {
+            return Err(eyre::eyre!(
+                "Failed to copy files of document {} to {}",
+                old_id,
+                id
+            ));
+        }
     }
 
     Ok(())

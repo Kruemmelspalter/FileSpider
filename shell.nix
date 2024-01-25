@@ -3,6 +3,8 @@ mkShell {
   nativeBuildInputs = with pkgs; [
     rustup
     cargo-tauri
+
+    mold
     
     pkg-config
     dbus

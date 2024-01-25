@@ -1,14 +1,14 @@
 use eyre::Result;
+use tauri::State;
 use tauri::{
     plugin::{Builder as PluginBuilder, TauriPlugin},
     Runtime,
 };
-use tauri::State;
 use uuid::Uuid;
 
 use crate::document;
-use crate::FilespiderState;
 use crate::types::*;
+use crate::FilespiderState;
 
 #[tauri::command]
 pub async fn search(
@@ -28,7 +28,9 @@ pub async fn search(
         page,
         page_length,
         sort,
-    ).await.map_err(|x| format!("{x:?}"))
+    )
+    .await
+    .map_err(|x| format!("{x:?}"))
 }
 
 #[tauri::command]
@@ -47,7 +49,9 @@ pub async fn create(
         tags,
         extension,
         file,
-    ).await.map_err(|x| format!("{x:?}"))
+    )
+    .await
+    .map_err(|x| format!("{x:?}"))
 }
 
 #[tauri::command]
@@ -57,17 +61,16 @@ pub async fn import_pdf(
     tags: Vec<String>,
     file: String,
 ) -> Result<Uuid, String> {
-    document::import_pdf(
-        &*state.pool.lock().await,
-        title,
-        tags,
-        file,
-    ).await.map_err(|x| format!("{x:?}"))
+    document::import_pdf(&*state.pool.lock().await, title, tags, file)
+        .await
+        .map_err(|x| format!("{x:?}"))
 }
 
 #[tauri::command]
 pub async fn get_meta(state: State<'_, FilespiderState>, id: Uuid) -> Result<Meta, String> {
-    document::get_meta(&*state.pool.lock().await, id).await.map_err(|x| format!("{x:?}"))
+    document::get_meta(&*state.pool.lock().await, id)
+        .await
+        .map_err(|x| format!("{x:?}"))
 }
 
 #[tauri::command]
@@ -79,7 +82,9 @@ pub async fn render(
         &*state.pool.lock().await,
         &mut *state.renderers.lock().await,
         id,
-    ).await.map_err(|x| format!("{x:?}"))
+    )
+    .await
+    .map_err(|x| format!("{x:?}"))
 }
 
 /// returns Ok(false) if editor is already running, if editor got spawned it returns Ok(true)
@@ -90,7 +95,9 @@ pub async fn open_editor(state: State<'_, FilespiderState>, id: Uuid) -> Result<
         &*state.settings.lock().await,
         &mut *state.editors.lock().await,
         id,
-    ).await.map_err(|x| format!("{x:?}"))
+    )
+    .await
+    .map_err(|x| format!("{x:?}"))
 }
 
 #[tauri::command]
@@ -99,12 +106,16 @@ pub async fn alter_meta(
     id: Uuid,
     patch: MetaPatch,
 ) -> Result<(), String> {
-    document::patch_meta(&*state.pool.lock().await, id, patch).await.map_err(|x| format!("{x:?}"))
+    document::patch_meta(&*state.pool.lock().await, id, patch)
+        .await
+        .map_err(|x| format!("{x:?}"))
 }
 
 #[tauri::command]
 pub async fn delete(state: State<'_, FilespiderState>, id: Uuid) -> Result<(), String> {
-    document::delete(&*state.pool.lock().await, id).await.map_err(|x| format!("{x:?}"))
+    document::delete(&*state.pool.lock().await, id)
+        .await
+        .map_err(|x| format!("{x:?}"))
 }
 
 #[tauri::command]
@@ -112,7 +123,9 @@ pub async fn get_tags(
     state: State<'_, FilespiderState>,
     crib: String,
 ) -> Result<Vec<String>, String> {
-    document::get_tags(&*state.pool.lock().await, crib).await.map_err(|x| format!("{x:?}"))
+    document::get_tags(&*state.pool.lock().await, crib)
+        .await
+        .map_err(|x| format!("{x:?}"))
 }
 
 #[tauri::command]
@@ -120,24 +133,38 @@ pub async fn show_render_in_explorer(
     state: State<'_, FilespiderState>,
     id: Uuid,
 ) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    return match state.dbus.lock().await.as_ref() {
+        None => Err("D-Bus not available".to_string()),
+        Some(dbus) => document::show_render_in_explorer(
+            &*state.pool.lock().await,
+            &mut *state.renderers.lock().await,
+            id,
+            dbus.clone(),
+        )
+        .await
+        .map_err(|x| format!("{x:?}")),
+    };
+    #[cfg(not(target_os = "linux"))]
     document::show_render_in_explorer(
         &*state.pool.lock().await,
         &mut *state.renderers.lock().await,
         id,
-        #[cfg(target_os = "linux")]state.dbus.lock().await.clone(),
-    ).await.map_err(|x| format!("{x:?}"))
+    )
+    .await
+    .map_err(|x| format!("{x:?}"))
 }
 
 #[tauri::command]
-pub async fn update_accessed(
-    state: State<'_, FilespiderState>,
-    id: Uuid,
-) -> Result<(), String> {
-    document::update_accessed(&*state.pool.lock().await, id).await.map_err(|x| format!("{x:?}"))
+pub async fn update_accessed(state: State<'_, FilespiderState>, id: Uuid) -> Result<(), String> {
+    document::update_accessed(&*state.pool.lock().await, id)
+        .await
+        .map_err(|x| format!("{x:?}"))
 }
 
 pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
-    PluginBuilder::new("document").invoke_handler(tauri::generate_handler![
+    PluginBuilder::new("document")
+        .invoke_handler(tauri::generate_handler![
             search,
             create,
             import_pdf,
@@ -149,5 +176,6 @@ pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
             get_tags,
             show_render_in_explorer,
             update_accessed,
-        ]).build()
+        ])
+        .build()
 }

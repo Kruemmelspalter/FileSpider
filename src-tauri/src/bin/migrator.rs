@@ -58,9 +58,9 @@ async fn main() -> Result<()> {
 
         let docdir = filespider::document::get_document_directory(&id)?;
         let old_id = Uuid::try_parse(&r.get::<String, &str>("id"))?;
-        let ext = match r.get::<Option<String>>("fileExtension") {
+        let ext = match r.get::<Option<String>, &str>("fileExtension") {
             Some(s) => format!(".{}, s"),
-            None = String::new(),
+            None => String::new(),
         };
         if !Command::new("sh")
             .arg("-c")

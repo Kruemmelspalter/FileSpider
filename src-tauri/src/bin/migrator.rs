@@ -51,14 +51,17 @@ async fn main() -> Result<()> {
                 _ => filespider::types::DocType::Plain,
             }),
             tags,
-            r.try_get("fileExtension").map(S ome).unwrap_or(None),
+            r.try_get("fileExtension").map(Some).unwrap_or(None),
             File::None,
         )
         .await?;
 
         let docdir = filespider::document::get_document_directory(&id)?;
         let old_id = Uuid::try_parse(&r.get::<String, &str>("id"))?;
-        let ext = 
+        let ext = match r.get::<Option<String>>("fileExtension") {
+            Some(s) => format!(".{}, s"),
+            None = String::new(),
+        };
         if !Command::new("sh")
             .arg("-c")
             .arg(format!(

@@ -65,7 +65,7 @@ async fn main() -> Result<()> {
         if !Command::new("sh")
             .arg("-c")
             .arg(format!(
-                "mkdir {}/{} && cp -r {}/{}/* {} && mv {}/{}{} {}/{}{}",
+                "mkdir {} && cp -r {}/{}/* {} && mv {}/{}{} {}/{}{}",
                 docdir, id, args.document_directory, old_id, docdir, docdir, old_id, ext, docdir, id, ext,
             ))
             .spawn()?

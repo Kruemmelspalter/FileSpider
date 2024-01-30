@@ -57,7 +57,7 @@ async fn main() -> Result<()> {
         .await?;
 
         let docdir = filespider::document::get_document_directory(&id)?;
-        let old_id = r.get::<Uuid, &str>("id");
+        let old_id = Uuid::parse_str(r.get::<String, &str>("id"));
         if !Command::new("sh")
             .arg("-c")
             .arg(format!(

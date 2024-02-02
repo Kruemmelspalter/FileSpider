@@ -57,12 +57,16 @@ async fn main() -> Result<()> {
         .await?;
 
         let docdir = filespider::document::get_document_directory(&id)?;
-        let old_id = r.get::<Uuid, &str>("id");
+        let old_id = Uuid::try_parse(&r.get::<String, &str>("id"))?;
+        let ext = match r.get::<Option<String>, &str>("fileExtension") {
+            Some(s) => format!(".{}", s),
+            None => String::new(),
+        };
         if !Command::new("sh")
             .arg("-c")
             .arg(format!(
-                "cp -r {}/{}/* {} && mv {}/{} {}/{}",
-                args.document_directory, old_id, docdir, docdir, old_id, docdir, id
+                "mkdir {}/{}; cp -r {}/{}/* {} && mv {}/{}{} {}/{}{}",
+                docdir, id, args.document_directory, old_id, docdir, docdir, old_id, ext, docdir, id, ext,
             ))
             .spawn()?
             .wait()

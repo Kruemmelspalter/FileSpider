@@ -59,9 +59,9 @@ pub async fn import_pdf(
     state: State<'_, FilespiderState>,
     title: String,
     tags: Vec<String>,
-    file: String,
+    file: document::File,
 ) -> Result<Uuid, String> {
-    document::import_pdf(&*state.pool.lock().await, title, tags, file)
+    document::import_pdf(&*state.pool.lock().await, title, tags, &file)
         .await
         .map_err(|x| format!("{x:?}"))
 }

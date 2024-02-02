@@ -107,7 +107,7 @@ impl DocType {
         match self {
             DocType::Plain => settings.text_editor.clone(),
             DocType::Markdown => settings.text_editor.clone(),
-            DocType::XournalPP => ("xournalpp".to_string(), vec![]),
+            DocType::XournalPP => ("xournalpp".to_string(), vec!["%FILE%".to_string()]),
             DocType::LaTeX => settings.text_editor.clone(),
         }
     }

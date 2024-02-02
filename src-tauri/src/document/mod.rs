@@ -7,7 +7,6 @@ use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
 use base64::prelude::*;
-use chrono::NaiveDateTime;
 use eyre::eyre;
 use eyre::Result;
 use flate2::write::GzEncoder;
@@ -153,16 +152,10 @@ pub async fn create(
 
     tokio::fs::create_dir(get_document_directory(&id)?).await?;
 
-    match file {
-        File::Path(path) => tokio::fs::copy(path, get_document_file(&id, &extension)?)
-            .await
-            .map(|_| ()),
-        File::Blob(b) => tokio::fs::write(get_document_file(&id, &extension)?, b).await,
-        File::None => tokio::fs::write(get_document_file(&id, &extension)?, [0u8; 0]).await,
-    }?;
+    write_file_object_to_disk(&file, get_document_file(&id, &extension)?).await?;
 
     let doc_type_str = doc_type.unwrap_or(DocType::Plain).to_string();
-    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u32;
+    let timestamp = chrono::Utc::now();
     query!(
         "insert into Document (id, title, type, added, file_extension, accessed) values (?, ?, ?, ?, ?, ?)",
         id,
@@ -183,13 +176,26 @@ pub async fn create(
     Ok(id)
 }
 
+async fn write_file_object_to_disk(file: &File, dest: String) -> Result<(), eyre::Error> {
+    match file {
+        File::Path(path) => tokio::fs::copy(path, dest).await.map(|_| ()),
+        File::Blob(b) => tokio::fs::write(dest, b).await,
+        File::None => tokio::fs::write(dest, [0u8; 0]).await,
+    }?;
+    Ok(())
+}
+
 pub async fn import_pdf(
     pool: &SqlitePool,
     title: String,
     tags: Vec<String>,
-    file: String,
+    file: &File,
 ) -> Result<Uuid> {
-    let pdf = FileOptions::cached().open(&file)?;
+    let pdf = FileOptions::cached().load(match file {
+        File::None => return Err(eyre!("No file submitted")),
+        File::Path(p) => std::fs::read(p)?,
+        File::Blob(b) => b.clone(),
+    })?;
 
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
 
@@ -226,7 +232,7 @@ pub async fn import_pdf(
     let id: Uuid = Uuid::now_v1(&get_mac_address()?.map(|x| x.bytes()).unwrap_or([0x69u8; 6]));
     tokio::fs::create_dir(get_document_directory(&id)?).await?;
 
-    tokio::fs::copy(
+    write_file_object_to_disk(
         file,
         format!("{}/{}", get_document_directory(&id)?, "bg.pdf"),
     )
@@ -459,16 +465,15 @@ pub async fn show_render_in_explorer(
 pub async fn update_accessed(pool: &SqlitePool, id: Uuid) -> Result<()> {
     document_exists(&id).await?;
 
-    let time = match NaiveDateTime::from_timestamp_millis(
-        SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as i64,
-    ) {
-        Some(t) => t,
-        None => return Err(eyre!("failed to get time")),
-    };
+    let timestamp = chrono::Utc::now();
 
-    query!("update Document set accessed = ? where id = ?", time, id)
-        .execute(pool)
-        .await?;
+    query!(
+        "update Document set accessed = ? where id = ?",
+        timestamp,
+        id
+    )
+    .execute(pool)
+    .await?;
 
     Ok(())
 }

@@ -28,4 +28,5 @@ mkShell {
     calibre
   ];
   PATH = "${builtins.getEnv "PATH"}:${builtins.getEnv "HOME"}/.cargo/bin";
+  LD_LIBRARY_PATH = "${pkgs.openssl.out.outPath}/lib";
 }
